@@ -1,0 +1,95 @@
+import { Tabs } from 'expo-router';
+import { Platform, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+
+import { Colors, Shadow } from '@/constants/theme';
+
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+function TabIcon({ name, color, size }: { name: IoniconName; color: string; size: number }) {
+  return <Ionicons name={name} size={size} color={color} />;
+}
+
+export default function MainLayout() {
+  return (
+    <Tabs
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: Colors.tabActive,
+        tabBarInactiveTintColor: Colors.tabInactive,
+        tabBarStyle: styles.tabBar,
+        tabBarLabelStyle: styles.tabLabel,
+        tabBarActiveBackgroundColor: Colors.surface,
+      }}
+    >
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: '게시판',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="newspaper-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="qna"
+        options={{
+          title: 'Q&A',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="help-circle-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="chat"
+        options={{
+          title: '채팅',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="chatbubbles-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="mentoring"
+        options={{
+          title: '멘토링',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="people-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: '프로필',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="person-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      {/* 탭바에서 숨길 스크린들 */}
+      <Tabs.Screen name="board" options={{ href: null }} />
+      <Tabs.Screen name="board/[postId]" options={{ href: null }} />
+      <Tabs.Screen name="board/create" options={{ href: null }} />
+      <Tabs.Screen name="qna/[qnaId]" options={{ href: null }} />
+      <Tabs.Screen name="qna/create" options={{ href: null }} />
+      <Tabs.Screen name="chat/[partnerId]" options={{ href: null }} />
+    </Tabs>
+  );
+}
+
+const styles = StyleSheet.create({
+  tabBar: {
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+    height: Platform.OS === 'ios' ? 88 : 68,
+    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    paddingTop: 8,
+    ...Shadow.md,
+  },
+  tabLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+});

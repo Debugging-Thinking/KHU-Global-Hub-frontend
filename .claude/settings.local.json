@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)",
+      "Bash(eas:*)",
+      "Bash(npx expo:*)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:8082)"
+    ]
+  }
+}
