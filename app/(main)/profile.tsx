@@ -204,6 +204,20 @@ export default function ProfileScreen() {
         </View>
       </View>
 
+      {/* 경희 온도 — 구조만 (퀴즈·멘토링·참여도 점수 나중에 연결) */}
+      {!isEditing && (
+        <View style={styles.tempCard}>
+          <View style={styles.tempRow}>
+            <Ionicons name="thermometer-outline" size={18} color={Colors.accent} />
+            <Text style={styles.tempLabel}>경희 온도</Text>
+            <View style={styles.tempBadge}>
+              <Text style={styles.tempValue}>--°</Text>
+            </View>
+          </View>
+          <Text style={styles.tempHint}>퀴즈 점수·멘토링 참여도 등이 반영될 예정이에요</Text>
+        </View>
+      )}
+
       {/* 정보 카드 */}
       {!isEditing ? (
         <Card style={styles.infoCard}>
@@ -457,6 +471,43 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   logoutBtn: { marginBottom: Spacing[8] },
+  tempCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    marginBottom: Spacing[4],
+    borderWidth: 1,
+    borderColor: Colors.accentLight,
+    ...Shadow.sm,
+  },
+  tempRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[2],
+    marginBottom: Spacing[1],
+  },
+  tempLabel: {
+    flex: 1,
+    fontSize: Typography.base,
+    fontWeight: Typography.semibold,
+    color: Colors.textPrimary,
+  },
+  tempBadge: {
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    backgroundColor: Colors.accentLight,
+    borderRadius: Radius.full,
+  },
+  tempValue: {
+    fontSize: Typography.base,
+    fontWeight: Typography.bold,
+    color: Colors.accent,
+  },
+  tempHint: {
+    fontSize: Typography.xs,
+    color: Colors.textTertiary,
+    marginLeft: Spacing[7],
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.9)',

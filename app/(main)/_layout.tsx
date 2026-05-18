@@ -59,6 +59,15 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="quiz"
+        options={{
+          title: '퀴즈',
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="school-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           title: '프로필',
