@@ -40,7 +40,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <Screen keyboardAvoiding padded style={{ backgroundColor: Colors.surface }}>
+    <Screen scrollable padded style={{ backgroundColor: Colors.surface }}>
       <View style={styles.container}>
         {/* 로고 영역 */}
         <View style={styles.logoSection}>

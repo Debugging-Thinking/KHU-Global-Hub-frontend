@@ -19,7 +19,6 @@ export default function RootLayout() {
     loadTokens();
   }, []);
 
-  // 인증 상태에 따른 라우팅 가드
   useEffect(() => {
     if (isLoading) return;
 
