@@ -14,20 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { chatApi } from '@/src/api/chat';
+import { useT, timeAgo } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { ConversationSummary } from '@/src/types/chat';
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금';
-  if (mins < 60) return `${mins}분`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간`;
-  return `${Math.floor(hours / 24)}일`;
-}
-
-function ConversationItem({ item, onPress }: { item: ConversationSummary; onPress: () => void }) {
+function ConversationItem({ item, onPress, t }: { item: ConversationSummary; onPress: () => void; t: ReturnType<typeof useT> }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.item}>
       <View style={styles.avatar}>
@@ -42,7 +33,7 @@ function ConversationItem({ item, onPress }: { item: ConversationSummary; onPres
       <View style={styles.content}>
         <View style={styles.topRow}>
           <Text style={styles.name}>{item.partnerName}</Text>
-          <Text style={styles.time}>{timeAgo(item.lastMessageAt)}</Text>
+          <Text style={styles.time}>{timeAgo(item.lastMessageAt, t, true)}</Text>
         </View>
         <View style={styles.bottomRow}>
           <Text style={styles.lastMsg} numberOfLines={1}>{item.lastMessage}</Text>
@@ -61,6 +52,7 @@ function ConversationItem({ item, onPress }: { item: ConversationSummary; onPres
 
 export default function ChatListScreen() {
   const router = useRouter();
+  const t = useT();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,7 +76,7 @@ export default function ChatListScreen() {
           <View style={styles.headerIcon}>
             <Ionicons name="chatbubbles-outline" size={18} color={Colors.textInverse} />
           </View>
-          <Text style={styles.headerTitle}>채팅</Text>
+          <Text style={styles.headerTitle}>{t.chat}</Text>
         </View>
       </View>
 
@@ -99,6 +91,7 @@ export default function ChatListScreen() {
           renderItem={({ item }) => (
             <ConversationItem
               item={item}
+              t={t}
               onPress={() => router.push(`/(main)/chat/${item.partnerId}`)}
             />
           )}
@@ -113,7 +106,7 @@ export default function ChatListScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="chatbubbles-outline" size={48} color={Colors.border} />
-              <Text style={styles.emptyText}>아직 대화가 없어요</Text>
+              <Text style={styles.emptyText}>{t.noChatYet}</Text>
             </View>
           }
         />
@@ -193,5 +186,4 @@ const styles = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   empty: { alignItems: 'center', justifyContent: 'center', paddingTop: Spacing[16], gap: Spacing[2] },
   emptyText: { fontSize: Typography.base, color: Colors.textTertiary, fontWeight: Typography.medium },
-  emptySubText: { fontSize: Typography.sm, color: Colors.textTertiary },
 });

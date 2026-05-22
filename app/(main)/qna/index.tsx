@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -14,20 +14,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { qnaApi } from '@/src/api/qna';
+import { useAuthStore } from '@/src/store/authStore';
+import { useT, timeAgo } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { QnASummary } from '@/src/types/qna';
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
-}
-
-function QnACard({ item, onPress }: { item: QnASummary; onPress: () => void }) {
+function QnACard({ item, onPress, t }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT> }) {
   return (
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.cardTop}>
@@ -35,14 +27,14 @@ function QnACard({ item, onPress }: { item: QnASummary; onPress: () => void }) {
         {item.isAdopted && (
           <View style={styles.adoptedBadge}>
             <Ionicons name="checkmark" size={11} color={Colors.success} />
-            <Text style={styles.adoptedText}>채택</Text>
+            <Text style={styles.adoptedText}>{t.adopted}</Text>
           </View>
         )}
       </View>
       <View style={styles.meta}>
         <Text style={styles.metaText}>{item.authorName}</Text>
         <Text style={styles.metaDot}>·</Text>
-        <Text style={styles.metaText}>{timeAgo(item.createdAt)}</Text>
+        <Text style={styles.metaText}>{timeAgo(item.createdAt, t)}</Text>
       </View>
       <View style={styles.stats}>
         <View style={styles.stat}>
@@ -51,7 +43,7 @@ function QnACard({ item, onPress }: { item: QnASummary; onPress: () => void }) {
         </View>
         <View style={styles.stat}>
           <Ionicons name="chatbubble-outline" size={12} color={Colors.textTertiary} />
-          <Text style={styles.statText}>답변 {item.answerCount}</Text>
+          <Text style={styles.statText}>{t.answerCount(item.answerCount)}</Text>
         </View>
       </View>
     </Card>
@@ -60,13 +52,15 @@ function QnACard({ item, onPress }: { item: QnASummary; onPress: () => void }) {
 
 export default function QnAScreen() {
   const router = useRouter();
+  const t = useT();
+  const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const [items, setItems] = useState<QnASummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchData = async (refresh = false) => {
     try {
-      const res = await qnaApi.getQnas();
+      const res = await qnaApi.getQnas(language as any);
       setItems(res.content);
     } catch {} finally {
       if (refresh) setRefreshing(false);
@@ -74,7 +68,7 @@ export default function QnAScreen() {
     }
   };
 
-  useFocusEffect(useCallback(() => { fetchData(); }, []));
+  useFocusEffect(useCallback(() => { fetchData(); }, [language]));
 
   return (
     <Screen padded={false}>
@@ -102,7 +96,7 @@ export default function QnAScreen() {
           data={items}
           keyExtractor={(item) => String(item.qnaId)}
           renderItem={({ item }) => (
-            <QnACard item={item} onPress={() => router.push(`/(main)/qna/${item.qnaId}`)} />
+            <QnACard item={item} t={t} onPress={() => router.push(`/(main)/qna/${item.qnaId}`)} />
           )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: Spacing[3] }} />}
@@ -116,7 +110,7 @@ export default function QnAScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="help-circle-outline" size={48} color={Colors.border} />
-              <Text style={styles.emptyText}>아직 질문이 없어요</Text>
+              <Text style={styles.emptyText}>{t.noQuestionsYet}</Text>
             </View>
           }
         />

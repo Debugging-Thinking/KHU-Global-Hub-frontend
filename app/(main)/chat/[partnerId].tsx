@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { chatApi } from '@/src/api/chat';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { ChatMessage } from '@/src/types/chat';
 
@@ -23,6 +24,7 @@ const POLL_INTERVAL = 5000;
 
 export default function ChatRoomScreen() {
   const router = useRouter();
+  const t = useT();
   const { partnerId } = useLocalSearchParams<{ partnerId: string }>();
   const myId = useAuthStore((s) => s.profile?.memberId);
 
@@ -42,7 +44,6 @@ export default function ChatRoomScreen() {
 
   useEffect(() => {
     fetchMessages().finally(() => setLoading(false));
-    // 폴링 — 5초마다 갱신
     pollTimer.current = setInterval(fetchMessages, POLL_INTERVAL);
     return () => {
       if (pollTimer.current) clearInterval(pollTimer.current);
@@ -95,7 +96,7 @@ export default function ChatRoomScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>대화</Text>
+        <Text style={styles.headerTitle}>{t.conversation}</Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -123,7 +124,7 @@ export default function ChatRoomScreen() {
         <View style={styles.inputBar}>
           <TextInput
             style={styles.input}
-            placeholder="메시지 입력..."
+            placeholder={t.messagePlaceholder}
             placeholderTextColor={Colors.textTertiary}
             value={text}
             onChangeText={setText}

@@ -17,6 +17,7 @@ export interface PostDetail extends PostSummary {
   imageUrls: string[];
   isLiked: boolean;
   isOwner: boolean;
+  originalLanguage: Language;
 }
 
 export interface CommentResponse {

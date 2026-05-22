@@ -7,11 +7,13 @@ import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
+  const t = useT();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +22,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError('이메일과 비밀번호를 입력해주세요.');
+      setError(t.emailPasswordRequired);
       return;
     }
     setError('');
@@ -31,7 +33,7 @@ export default function LoginScreen() {
         router.replace('/(auth)/profile-setup');
       }
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '로그인에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.loginFailed);
     } finally {
       setLoading(false);
     }
@@ -46,7 +48,7 @@ export default function LoginScreen() {
             <Ionicons name="people" size={38} color={Colors.textInverse} />
           </View>
           <Text style={styles.appName}>KHU Global Hub</Text>
-          <Text style={styles.tagline}>경희대학교 유학생 커뮤니티</Text>
+          <Text style={styles.tagline}>{t.communityTagline}</Text>
           <View style={styles.khuLine}>
             <View style={styles.crimsonBar} />
             <Text style={styles.khuText}>KYUNG HEE UNIVERSITY</Text>
@@ -57,7 +59,7 @@ export default function LoginScreen() {
         {/* 폼 */}
         <View style={styles.form}>
           <Input
-            label="경희대 이메일"
+            label={t.khuEmail}
             placeholder="example@khu.ac.kr"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -65,8 +67,8 @@ export default function LoginScreen() {
             onChangeText={setEmail}
           />
           <Input
-            label="비밀번호"
-            placeholder="비밀번호를 입력하세요"
+            label={t.passwordLabel}
+            placeholder={t.passwordPlaceholder}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -75,7 +77,7 @@ export default function LoginScreen() {
         </View>
 
         <Button
-          label="로그인"
+          label={t.loginLabel}
           onPress={handleLogin}
           loading={loading}
           fullWidth
@@ -83,9 +85,9 @@ export default function LoginScreen() {
         />
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>아직 계정이 없으신가요?</Text>
+          <Text style={styles.footerText}>{t.noAccount}</Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text style={styles.link}>회원가입</Text>
+            <Text style={styles.link}>{t.signUp}</Text>
           </TouchableOpacity>
         </View>
       </View>

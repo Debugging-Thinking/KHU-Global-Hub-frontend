@@ -15,18 +15,21 @@ import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { boardApi } from '@/src/api/board';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { BoardType } from '@/src/types/board';
 
-const BOARD_TYPES: { value: BoardType; label: string }[] = [
-  { value: 'FRESHMAN', label: '신입생' },
-  { value: 'FREE', label: '자유' },
-  { value: 'GRADUATE', label: '졸업생' },
-];
-
 export default function CreatePostScreen() {
   const router = useRouter();
+  const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
+
+  const BOARD_TYPES: { value: BoardType; label: string }[] = [
+    { value: 'FRESHMAN', label: t.boardFreshman },
+    { value: 'FREE', label: t.boardFree },
+    { value: 'GRADUATE', label: t.boardGraduate },
+  ];
+
   const [boardType, setBoardType] = useState<BoardType>('FREE');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -44,16 +47,16 @@ export default function CreatePostScreen() {
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
-      setError('제목과 내용을 입력해주세요.');
+      setError(t.titleContentRequired);
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await boardApi.createPost({ title, content, boardType, isAnonymous, language });
+      await boardApi.createPost({ title, content, boardType, isAnonymous, language: language as any });
       router.back();
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '게시글 작성에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.createPostFailed);
     } finally {
       setLoading(false);
     }
@@ -66,23 +69,23 @@ export default function CreatePostScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>게시글 작성</Text>
-        <Button label="등록" onPress={handleSubmit} loading={loading} size="sm" />
+        <Text style={styles.headerTitle}>{t.createPost}</Text>
+        <Button label={t.postButton} onPress={handleSubmit} loading={loading} size="sm" />
       </View>
 
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
         {/* 게시판 선택 */}
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>게시판</Text>
+          <Text style={styles.sectionLabel}>{t.boardLabel}</Text>
           <View style={styles.chips}>
-            {BOARD_TYPES.map((t) => (
+            {BOARD_TYPES.map((bt) => (
               <TouchableOpacity
-                key={t.value}
-                onPress={() => setBoardType(t.value)}
-                style={[styles.chip, boardType === t.value && styles.chipActive]}
+                key={bt.value}
+                onPress={() => setBoardType(bt.value)}
+                style={[styles.chip, boardType === bt.value && styles.chipActive]}
               >
-                <Text style={[styles.chipText, boardType === t.value && styles.chipTextActive]}>
-                  {t.label}
+                <Text style={[styles.chipText, boardType === bt.value && styles.chipTextActive]}>
+                  {bt.label}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -92,7 +95,7 @@ export default function CreatePostScreen() {
         {/* 제목 */}
         <View style={styles.titleInput}>
           <TextInput
-            placeholder="제목을 입력하세요"
+            placeholder={t.titlePlaceholder}
             placeholderTextColor={Colors.textTertiary}
             style={styles.titleText}
             value={title}
@@ -103,7 +106,7 @@ export default function CreatePostScreen() {
 
         {/* 내용 */}
         <TextInput
-          placeholder="내용을 입력하세요..."
+          placeholder={t.contentPlaceholder}
           placeholderTextColor={Colors.textTertiary}
           style={styles.contentText}
           value={content}
@@ -115,7 +118,7 @@ export default function CreatePostScreen() {
         {/* 익명 설정 */}
         <View style={styles.anonymousRow}>
           <Ionicons name="person-outline" size={18} color={Colors.textSecondary} />
-          <Text style={styles.anonymousLabel}>익명으로 게시</Text>
+          <Text style={styles.anonymousLabel}>{t.postAnonymously}</Text>
           <Switch
             value={isAnonymous}
             onValueChange={setIsAnonymous}

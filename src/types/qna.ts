@@ -35,6 +35,7 @@ export interface QnADetail extends QnASummary {
   isLiked: boolean;
   isOwner: boolean;
   answers: AnswerResponse[];
+  originalLanguage: Language;
 }
 
 export interface CreateQnARequest {

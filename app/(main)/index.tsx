@@ -15,54 +15,22 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { boardApi } from '@/src/api/board';
+import { useAuthStore } from '@/src/store/authStore';
+import { useT, timeAgo } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { BoardType, PostSummary } from '@/src/types/board';
 
-const TABS: { value: BoardType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-  { value: 'FRESHMAN', label: '신입생', icon: 'sparkles-outline' },
-  { value: 'FREE', label: '자유', icon: 'chatbox-outline' },
-  { value: 'GRADUATE', label: '졸업생', icon: 'school-outline' },
-];
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
-}
-
-function PostCard({ post, onPress }: { post: PostSummary; onPress: () => void }) {
-  return (
-    <Card onPress={onPress} style={styles.postCard}>
-      <Text style={styles.postTitle} numberOfLines={2}>
-        {post.title}
-      </Text>
-      <View style={styles.postMeta}>
-        <Text style={styles.metaAuthor}>
-          {post.isAnonymous ? '익명' : post.authorName ?? '알 수 없음'}
-        </Text>
-        <Text style={styles.metaDot}>·</Text>
-        <Text style={styles.metaTime}>{timeAgo(post.createdAt)}</Text>
-      </View>
-      <View style={styles.postStats}>
-        <View style={styles.stat}>
-          <Ionicons name="heart-outline" size={13} color={Colors.primary} />
-          <Text style={styles.statText}>{post.likeCount}</Text>
-        </View>
-        <View style={styles.stat}>
-          <Ionicons name="chatbubble-outline" size={13} color={Colors.textTertiary} />
-          <Text style={styles.statText}>{post.commentCount}</Text>
-        </View>
-      </View>
-    </Card>
-  );
-}
-
-export default function BoardScreen() {
+function BoardScreen() {
   const router = useRouter();
+  const t = useT();
+  const language = useAuthStore((s) => s.profile?.language ?? 'KO');
+
+  const TABS: { value: BoardType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { value: 'FRESHMAN', label: t.boardFreshman, icon: 'sparkles-outline' },
+    { value: 'FREE', label: t.boardFree, icon: 'chatbox-outline' },
+    { value: 'GRADUATE', label: t.boardGraduate, icon: 'school-outline' },
+  ];
+
   const [activeTab, setActiveTab] = useState<BoardType>('FRESHMAN');
   const [posts, setPosts] = useState<PostSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,7 +40,7 @@ export default function BoardScreen() {
 
   const fetchPosts = async (tab: BoardType, pageNum: number, refresh = false) => {
     try {
-      const res = await boardApi.getPosts(tab, 'KO', pageNum);
+      const res = await boardApi.getPosts(tab, language as any, pageNum);
       if (refresh || pageNum === 0) {
         setPosts(res.content);
       } else {
@@ -86,12 +54,12 @@ export default function BoardScreen() {
     setLoading(true);
     setPage(0);
     fetchPosts(activeTab, 0, true).finally(() => setLoading(false));
-  }, [activeTab]);
+  }, [activeTab, language]);
 
   useFocusEffect(useCallback(() => {
     setPage(0);
     fetchPosts(activeTab, 0, true);
-  }, [activeTab]));
+  }, [activeTab, language]));
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -115,32 +83,32 @@ export default function BoardScreen() {
           <View style={styles.lionIcon}>
             <Ionicons name="newspaper-outline" size={18} color={Colors.textInverse} />
           </View>
-          <Text style={styles.headerTitle}>게시판</Text>
+          <Text style={styles.headerTitle}>{t.board}</Text>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/(main)/board/create')}
           style={styles.writeBtn}
         >
           <Ionicons name="pencil-outline" size={17} color={Colors.primary} />
-          <Text style={styles.writeBtnText}>글쓰기</Text>
+          <Text style={styles.writeBtnText}>{t.writePost}</Text>
         </TouchableOpacity>
       </View>
 
       {/* 탭 */}
       <View style={styles.tabBar}>
-        {TABS.map((t) => (
+        {TABS.map((tab) => (
           <Pressable
-            key={t.value}
-            onPress={() => setActiveTab(t.value)}
-            style={[styles.tab, activeTab === t.value && styles.tabActive]}
+            key={tab.value}
+            onPress={() => setActiveTab(tab.value)}
+            style={[styles.tab, activeTab === tab.value && styles.tabActive]}
           >
             <Ionicons
-              name={t.icon}
+              name={tab.icon}
               size={14}
-              color={activeTab === t.value ? Colors.primary : Colors.textTertiary}
+              color={activeTab === tab.value ? Colors.primary : Colors.textTertiary}
             />
-            <Text style={[styles.tabText, activeTab === t.value && styles.tabTextActive]}>
-              {t.label}
+            <Text style={[styles.tabText, activeTab === tab.value && styles.tabTextActive]}>
+              {tab.label}
             </Text>
           </Pressable>
         ))}
@@ -159,6 +127,7 @@ export default function BoardScreen() {
             <PostCard
               post={item}
               onPress={() => router.push(`/(main)/board/${item.postId}`)}
+              t={t}
             />
           )}
           contentContainerStyle={styles.list}
@@ -175,8 +144,8 @@ export default function BoardScreen() {
           ListEmptyComponent={
             <View style={styles.empty}>
               <Ionicons name="document-outline" size={48} color={Colors.border} />
-              <Text style={styles.emptyText}>아직 게시글이 없어요</Text>
-              <Text style={styles.emptySubText}>첫 번째 글을 작성해보세요</Text>
+              <Text style={styles.emptyText}>{t.noPostsYet}</Text>
+              <Text style={styles.emptySubText}>{t.createFirstPost}</Text>
             </View>
           }
         />
@@ -184,6 +153,35 @@ export default function BoardScreen() {
     </Screen>
   );
 }
+
+function PostCard({ post, onPress, t }: { post: PostSummary; onPress: () => void; t: ReturnType<typeof useT> }) {
+  return (
+    <Card onPress={onPress} style={styles.postCard}>
+      <Text style={styles.postTitle} numberOfLines={2}>
+        {post.title}
+      </Text>
+      <View style={styles.postMeta}>
+        <Text style={styles.metaAuthor}>
+          {post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
+        </Text>
+        <Text style={styles.metaDot}>·</Text>
+        <Text style={styles.metaTime}>{timeAgo(post.createdAt, t)}</Text>
+      </View>
+      <View style={styles.postStats}>
+        <View style={styles.stat}>
+          <Ionicons name="heart-outline" size={13} color={Colors.primary} />
+          <Text style={styles.statText}>{post.likeCount}</Text>
+        </View>
+        <View style={styles.stat}>
+          <Ionicons name="chatbubble-outline" size={13} color={Colors.textTertiary} />
+          <Text style={styles.statText}>{post.commentCount}</Text>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+export default BoardScreen;
 
 const styles = StyleSheet.create({
   header: {

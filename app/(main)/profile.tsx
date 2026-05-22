@@ -28,18 +28,13 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { useAuthStore } from '@/src/store/authStore';
 import { memberApi } from '@/src/api/auth';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { Language, MentoringRole } from '@/src/types/auth';
 
 const LANG_LABELS: Record<string, string> = {
   KO: '한국어', EN: 'English', ZH: '中文',
   VI: 'Tiếng Việt', ES: 'Español', MN: 'Монгол',
-};
-const ROLE_LABELS: Record<string, string> = {
-  MENTOR: '멘토', MENTEE: '멘티', NONE: '없음',
-};
-const ROLE_COLORS: Record<string, string> = {
-  MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
 };
 const LANGUAGES: { value: Language; label: string }[] = [
   { value: 'KO', label: '한국어' },
@@ -49,6 +44,9 @@ const LANGUAGES: { value: Language; label: string }[] = [
   { value: 'ES', label: 'Español' },
   { value: 'MN', label: 'Монгол' },
 ];
+const ROLE_COLORS: Record<string, string> = {
+  MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
+};
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2015 + 1 }, (_, i) => CURRENT_YEAR - i);
 
@@ -69,6 +67,11 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 
 export default function ProfileScreen() {
   const { profile, setProfile, logout } = useAuthStore();
+  const t = useT();
+
+  const ROLE_LABELS: Record<string, string> = {
+    MENTOR: t.mentor, MENTEE: t.mentee, NONE: t.none,
+  };
 
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState('');
@@ -100,7 +103,7 @@ export default function ProfileScreen() {
 
   const handleSave = async () => {
     if (!name || !department || !nationality) {
-      setError('모든 항목을 입력해주세요.');
+      setError(t.allFieldsRequired);
       return;
     }
     setSaving(true);
@@ -110,7 +113,7 @@ export default function ProfileScreen() {
       setProfile(updated);
       setIsEditing(false);
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '수정에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.updateFailed);
     } finally {
       setSaving(false);
     }
@@ -119,7 +122,7 @@ export default function ProfileScreen() {
   const handlePickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      showAlert('권한 필요', '사진 접근 권한이 필요합니다.');
+      showAlert(t.permissionNeeded, t.photoPermission);
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -133,15 +136,19 @@ export default function ProfileScreen() {
       const updated = await memberApi.updateProfileImage(result.assets[0]);
       setProfile(updated);
     } catch {
-      showAlert('오류', '프로필 사진 업로드에 실패했습니다.');
+      showAlert('오류', t.photoUploadFailed);
     }
   };
 
   const handleLogout = () => {
-    Alert.alert('로그아웃', '정말 로그아웃 하시겠어요?', [
-      { text: '취소', style: 'cancel' },
-      { text: '로그아웃', style: 'destructive', onPress: logout },
-    ]);
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${t.logoutConfirmTitle}\n${t.logoutConfirmMessage}`)) logout();
+    } else {
+      Alert.alert(t.logoutConfirmTitle, t.logoutConfirmMessage, [
+        { text: t.cancel, style: 'cancel' },
+        { text: t.logout, style: 'destructive', onPress: logout },
+      ]);
+    }
   };
 
   if (!profile) return null;
@@ -157,16 +164,16 @@ export default function ProfileScreen() {
           <View style={styles.headerIcon}>
             <Ionicons name="people" size={14} color={Colors.textInverse} />
           </View>
-          <Text style={styles.headerTitle}>프로필</Text>
+          <Text style={styles.headerTitle}>{t.profile}</Text>
         </View>
         {!isEditing ? (
           <TouchableOpacity onPress={handleEditStart} style={styles.editBtn}>
             <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
-            <Text style={styles.editBtnText}>수정</Text>
+            <Text style={styles.editBtnText}>{t.edit}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={handleCancel} style={styles.editBtn}>
-            <Text style={styles.cancelBtnText}>취소</Text>
+            <Text style={styles.cancelBtnText}>{t.cancel}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -207,25 +214,25 @@ export default function ProfileScreen() {
       {/* 정보 카드 */}
       {!isEditing ? (
         <Card style={styles.infoCard}>
-          <InfoRow icon="school-outline" label="학과" value={profile.department} />
+          <InfoRow icon="school-outline" label={t.department} value={profile.department} />
           <View style={styles.divider} />
-          <InfoRow icon="flag-outline" label="국적" value={profile.nationality} />
+          <InfoRow icon="flag-outline" label={t.nationality} value={profile.nationality} />
           <View style={styles.divider} />
-          <InfoRow icon="calendar-outline" label="입학년도" value={`${profile.admissionYear}년`} />
+          <InfoRow icon="calendar-outline" label={t.admissionYear} value={t.admissionYearValue(profile.admissionYear)} />
           <View style={styles.divider} />
-          <InfoRow icon="language-outline" label="언어" value={LANG_LABELS[profile.language] ?? profile.language} />
+          <InfoRow icon="language-outline" label={t.languageLabel} value={LANG_LABELS[profile.language] ?? profile.language} />
           <View style={styles.divider} />
-          <InfoRow icon="people-outline" label="멘토링" value={ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole} />
+          <InfoRow icon="people-outline" label={t.mentoringLabel} value={ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole} />
         </Card>
       ) : (
         <Card style={styles.editCard}>
-          <Input label="이름" value={name} onChangeText={setName} />
-          <Input label="학과" value={department} onChangeText={setDepartment} />
-          <Input label="국적" value={nationality} onChangeText={setNationality} />
+          <Input label={t.nameLabel} value={name} onChangeText={setName} />
+          <Input label={t.department} value={department} onChangeText={setDepartment} />
+          <Input label={t.nationality} value={nationality} onChangeText={setNationality} />
 
           {/* 입학년도 */}
           <View>
-            <Text style={styles.sectionLabel}>입학년도</Text>
+            <Text style={styles.sectionLabel}>{t.sectionAdmissionYear}</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
               {YEARS.map((y) => (
                 <TouchableOpacity
@@ -241,7 +248,7 @@ export default function ProfileScreen() {
 
           {/* 선호 언어 */}
           <View>
-            <Text style={styles.sectionLabel}>선호 언어</Text>
+            <Text style={styles.sectionLabel}>{t.preferredLanguage}</Text>
             <View style={styles.langGrid}>
               {LANGUAGES.map((l) => (
                 <TouchableOpacity
@@ -257,9 +264,9 @@ export default function ProfileScreen() {
 
           {/* 멘토링 역할 */}
           <View>
-            <Text style={styles.sectionLabel}>멘토링 역할</Text>
+            <Text style={styles.sectionLabel}>{t.mentoringRole}</Text>
             {isNewStudent ? (
-              <Text style={styles.hint}>신입생은 멘티로 자동 배정됩니다</Text>
+              <Text style={styles.hint}>{t.freshmanAutoMentee}</Text>
             ) : (
               <View style={styles.roleRow}>
                 {(['MENTEE', 'MENTOR'] as MentoringRole[]).map((r) => (
@@ -269,7 +276,7 @@ export default function ProfileScreen() {
                     style={[styles.chip, styles.roleChip, mentoringRole === r && styles.chipActive]}
                   >
                     <Text style={[styles.chipText, mentoringRole === r && styles.chipTextActive]}>
-                      {r === 'MENTEE' ? '멘티' : '멘토'}
+                      {r === 'MENTEE' ? t.mentee : t.mentor}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -278,7 +285,7 @@ export default function ProfileScreen() {
           </View>
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
-          <Button label="저장" onPress={handleSave} loading={saving} fullWidth size="lg" />
+          <Button label={t.save} onPress={handleSave} loading={saving} fullWidth size="lg" />
         </Card>
       )}
 
@@ -289,7 +296,7 @@ export default function ProfileScreen() {
       </View>
 
       {!isEditing && (
-        <Button label="로그아웃" onPress={handleLogout} variant="outline" fullWidth style={styles.logoutBtn} />
+        <Button label={t.logout} onPress={handleLogout} variant="outline" fullWidth style={styles.logoutBtn} />
       )}
 
       {/* 프로필 사진 확대 Modal */}

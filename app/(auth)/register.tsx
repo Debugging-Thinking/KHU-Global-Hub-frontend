@@ -6,10 +6,12 @@ import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { authApi } from '@/src/api/auth';
+import { useT } from '@/src/i18n';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const t = useT();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,11 +19,11 @@ export default function RegisterScreen() {
 
   const handleSendCode = async () => {
     if (!email.endsWith('@khu.ac.kr')) {
-      setError('@khu.ac.kr 이메일만 가입 가능합니다.');
+      setError(t.khuEmailOnly);
       return;
     }
     if (password.length < 8) {
-      setError('비밀번호는 8자 이상이어야 합니다.');
+      setError(t.passwordMin8Error);
       return;
     }
     setError('');
@@ -30,7 +32,7 @@ export default function RegisterScreen() {
       await authApi.register({ email, password });
       router.push({ pathname: '/(auth)/verify-email', params: { email } });
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '이메일 발송에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.emailSendFailed);
     } finally {
       setLoading(false);
     }
@@ -41,32 +43,29 @@ export default function RegisterScreen() {
       <View style={styles.container}>
         {/* 뒤로가기 */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>← 돌아가기</Text>
+          <Text style={styles.backText}>{t.back}</Text>
         </TouchableOpacity>
 
         {/* 헤더 */}
         <View style={styles.header}>
-          <Text style={styles.title}>회원가입</Text>
-          <Text style={styles.desc}>
-            경희대학교 이메일로 인증 코드를 받아{'\n'}
-            계정을 만들어보세요.
-          </Text>
+          <Text style={styles.title}>{t.registerTitle}</Text>
+          <Text style={styles.desc}>{t.registerDesc}</Text>
         </View>
 
         {/* 폼 */}
         <View style={styles.form}>
           <Input
-            label="경희대 이메일"
+            label={t.khuEmail}
             placeholder="example@khu.ac.kr"
             keyboardType="email-address"
             autoCapitalize="none"
             value={email}
             onChangeText={setEmail}
-            hint="@khu.ac.kr 이메일만 가입 가능합니다"
+            hint={t.khuEmailOnly}
           />
           <Input
-            label="비밀번호"
-            placeholder="8자 이상 입력하세요"
+            label={t.passwordLabel}
+            placeholder={t.passwordPlaceholder8}
             secureTextEntry
             value={password}
             onChangeText={setPassword}
@@ -75,7 +74,7 @@ export default function RegisterScreen() {
         </View>
 
         <Button
-          label="인증 코드 받기"
+          label={t.getVerifyCode}
           onPress={handleSendCode}
           loading={loading}
           fullWidth

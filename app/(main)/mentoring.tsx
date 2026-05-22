@@ -15,6 +15,7 @@ import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import apiClient, { unwrap } from '@/src/api/client';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 
 interface MatchInfo {
@@ -35,6 +36,7 @@ interface MatchInfo {
 
 export default function MentoringScreen() {
   const router = useRouter();
+  const t = useT();
   const profile = useAuthStore((s) => s.profile);
   const [match, setMatch] = useState<MatchInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -48,14 +50,13 @@ export default function MentoringScreen() {
       .finally(() => setLoading(false));
   }, []);
 
-  const roleLabel = profile?.mentoringRole === 'MENTOR' ? '멘토' : '멘티';
-  // 멘토 = 골드(경험·권위), 멘티 = 크림슨(열정·성장)
+  const roleLabel = profile?.mentoringRole === 'MENTOR' ? t.mentor : t.mentee;
   const roleColor = profile?.mentoringRole === 'MENTOR' ? Colors.accent : Colors.primary;
 
   return (
     <Screen scrollable padded>
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>멘토링</Text>
+        <Text style={styles.sectionTitle}>{t.mentoring}</Text>
       </View>
 
       {/* 내 역할 */}
@@ -70,15 +71,13 @@ export default function MentoringScreen() {
             <Text style={[styles.roleBadgeText, { color: roleColor }]}>{roleLabel}</Text>
           </View>
           <Text style={styles.roleDesc}>
-            {profile?.mentoringRole === 'MENTOR'
-              ? '후배 유학생을 도와주는 역할이에요'
-              : '선배 유학생에게 도움을 받을 수 있어요'}
+            {profile?.mentoringRole === 'MENTOR' ? t.mentorDesc : t.menteeDesc}
           </Text>
         </View>
       </Card>
 
       {/* 매칭 정보 */}
-      <Text style={styles.subtitle}>현재 매칭</Text>
+      <Text style={styles.subtitle}>{t.currentMatch}</Text>
 
       {loading ? (
         <View style={styles.center}>
@@ -87,18 +86,16 @@ export default function MentoringScreen() {
       ) : noMatch || !match ? (
         <Card style={styles.emptyCard}>
           <Ionicons name="people-outline" size={40} color={Colors.border} />
-          <Text style={styles.emptyTitle}>아직 매칭이 없어요</Text>
-          <Text style={styles.emptyDesc}>
-            매년 3월과 9월에 자동으로{'\n'}멘토-멘티 매칭이 이루어져요
-          </Text>
+          <Text style={styles.emptyTitle}>{t.noMatchYet}</Text>
+          <Text style={styles.emptyDesc}>{t.matchAutoDesc}</Text>
         </Card>
       ) : (
         <Card style={styles.matchCard}>
           <View style={styles.matchHeader}>
-            <Text style={styles.matchSemester}>{match.semester} 매칭</Text>
+            <Text style={styles.matchSemester}>{t.matchSemester(match.semester)}</Text>
             <View style={styles.activeBadge}>
               <View style={styles.activeDot} />
-              <Text style={styles.activeText}>활성</Text>
+              <Text style={styles.activeText}>{t.active}</Text>
             </View>
           </View>
 
@@ -118,7 +115,7 @@ export default function MentoringScreen() {
           </View>
 
           <Button
-            label="메시지 보내기"
+            label={t.sendMessage}
             onPress={() => router.push(`/(main)/chat/${match.partner.memberId}`)}
             fullWidth
             variant="outline"

@@ -3,6 +3,7 @@ import { Platform, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors, Shadow } from '@/constants/theme';
+import { useT } from '@/src/i18n';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -11,6 +12,8 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 }
 
 export default function MainLayout() {
+  const t = useT();
+
   return (
     <Tabs
       screenOptions={{
@@ -25,7 +28,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: '게시판',
+          title: t.tabBoard,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="newspaper-outline" color={color} size={size} />
           ),
@@ -34,7 +37,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="qna"
         options={{
-          title: 'Q&A',
+          title: t.tabQna,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="help-circle-outline" color={color} size={size} />
           ),
@@ -43,7 +46,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: '채팅',
+          title: t.tabChat,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="chatbubbles-outline" color={color} size={size} />
           ),
@@ -52,7 +55,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="mentoring"
         options={{
-          title: '멘토링',
+          title: t.tabMentoring,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="people-outline" color={color} size={size} />
           ),
@@ -61,7 +64,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: '프로필',
+          title: t.tabProfile,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="person-outline" color={color} size={size} />
           ),

@@ -15,10 +15,12 @@ import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Spacing, Typography } from '@/constants/theme';
 
 export default function CreateQnAScreen() {
   const router = useRouter();
+  const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -35,16 +37,16 @@ export default function CreateQnAScreen() {
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
-      setError('제목과 내용을 입력해주세요.');
+      setError(t.titleContentRequired);
       return;
     }
     setError('');
     setLoading(true);
     try {
-      await qnaApi.createQna({ title, content, isAnonymous, language });
+      await qnaApi.createQna({ title, content, isAnonymous, language: language as any });
       router.replace('/(main)/qna');
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '질문 등록에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.createQnaFailed);
     } finally {
       setLoading(false);
     }
@@ -56,14 +58,14 @@ export default function CreateQnAScreen() {
         <TouchableOpacity onPress={() => router.back()}>
           <Ionicons name="close" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>질문 작성</Text>
-        <Button label="등록" onPress={handleSubmit} loading={loading} size="sm" />
+        <Text style={styles.headerTitle}>{t.createQuestion}</Text>
+        <Button label={t.postButton} onPress={handleSubmit} loading={loading} size="sm" />
       </View>
 
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.titleInput}>
           <TextInput
-            placeholder="제목을 입력하세요"
+            placeholder={t.questionTitlePlaceholder}
             placeholderTextColor={Colors.textTertiary}
             style={styles.titleText}
             value={title}
@@ -72,7 +74,7 @@ export default function CreateQnAScreen() {
           />
         </View>
         <TextInput
-          placeholder="질문 내용을 자세히 작성하면 더 좋은 답변을 받을 수 있어요"
+          placeholder={t.questionContentPlaceholder}
           placeholderTextColor={Colors.textTertiary}
           style={styles.contentText}
           value={content}
@@ -82,7 +84,7 @@ export default function CreateQnAScreen() {
         />
         <View style={styles.anonymousRow}>
           <Ionicons name="person-outline" size={18} color={Colors.textSecondary} />
-          <Text style={styles.anonymousLabel}>익명으로 게시</Text>
+          <Text style={styles.anonymousLabel}>{t.postAnonymously}</Text>
           <Switch
             value={isAnonymous}
             onValueChange={setIsAnonymous}

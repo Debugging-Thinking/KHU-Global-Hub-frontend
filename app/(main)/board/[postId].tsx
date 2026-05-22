@@ -14,13 +14,13 @@ import {
   View,
 } from 'react-native';
 
-function confirmAction(title: string, message: string, onConfirm: () => void) {
+function confirmAction(title: string, message: string, cancelLabel: string, deleteLabel: string, onConfirm: () => void) {
   if (Platform.OS === 'web') {
     if (window.confirm(`${title}\n${message}`)) onConfirm();
   } else {
     Alert.alert(title, message, [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: onConfirm },
+      { text: cancelLabel, style: 'cancel' },
+      { text: deleteLabel, style: 'destructive', onPress: onConfirm },
     ]);
   }
 }
@@ -28,35 +28,32 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { boardApi } from '@/src/api/board';
+import { useAuthStore } from '@/src/store/authStore';
+import { useT, timeAgo } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { CommentResponse, PostDetail } from '@/src/types/board';
 
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
-}
-
 function CommentItem({
   comment,
+  cancelLabel,
+  deleteLabel,
   onLike,
   onDelete,
 }: {
   comment: CommentResponse;
+  cancelLabel: string;
+  deleteLabel: string;
   onLike: (id: number) => void;
   onDelete: (id: number) => void;
 }) {
+  const t = useT();
   return (
     <View style={styles.commentItem}>
       <View style={styles.commentHeader}>
         <Text style={styles.commentAuthor}>
-          {comment.authorName ?? '익명'}
+          {comment.authorName ?? t.anonymous}
         </Text>
-        <Text style={styles.commentTime}>{timeAgo(comment.createdAt)}</Text>
+        <Text style={styles.commentTime}>{timeAgo(comment.createdAt, t)}</Text>
         {comment.isOwner && (
           <TouchableOpacity onPress={() => onDelete(comment.commentId)} style={styles.deleteBtn}>
             <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
@@ -75,8 +72,8 @@ function CommentItem({
       {comment.children.map((child) => (
         <View key={child.commentId} style={styles.replyItem}>
           <View style={styles.commentHeader}>
-            <Text style={styles.commentAuthor}>{child.authorName ?? '익명'}</Text>
-            <Text style={styles.commentTime}>{timeAgo(child.createdAt)}</Text>
+            <Text style={styles.commentAuthor}>{child.authorName ?? t.anonymous}</Text>
+            <Text style={styles.commentTime}>{timeAgo(child.createdAt, t)}</Text>
             {child.isOwner && (
               <TouchableOpacity onPress={() => onDelete(child.commentId)} style={styles.deleteBtn}>
                 <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
@@ -92,7 +89,10 @@ function CommentItem({
 
 export default function PostDetailScreen() {
   const router = useRouter();
+  const t = useT();
   const { postId } = useLocalSearchParams<{ postId: string }>();
+  const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
+
   const [post, setPost] = useState<PostDetail | null>(null);
   const [comments, setComments] = useState<CommentResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -101,10 +101,27 @@ export default function PostDetailScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  // 번역 토글: false = 번역본(기본), true = 원문
+  const [showingOriginal, setShowingOriginal] = useState(false);
+
+  const fetchPost = async (lang: string) => {
+    const id = Number(postId);
+    const p = await boardApi.getPost(id, lang as any);
+    setPost(p);
+    setLiked(p.isLiked);
+    setLikeCount(p.likeCount);
+  };
+
+  const fetchComments = async () => {
+    const id = Number(postId);
+    const c = await boardApi.getComments(id, userLanguage as any);
+    setComments(c);
+  };
 
   useEffect(() => {
     const id = Number(postId);
-    Promise.all([boardApi.getPost(id), boardApi.getComments(id)])
+    setShowingOriginal(false);
+    Promise.all([boardApi.getPost(id, userLanguage as any), boardApi.getComments(id, userLanguage as any)])
       .then(([p, c]) => {
         setPost(p);
         setComments(c);
@@ -112,7 +129,17 @@ export default function PostDetailScreen() {
         setLikeCount(p.likeCount);
       })
       .finally(() => setLoading(false));
-  }, [postId]);
+  }, [postId, userLanguage]);
+
+  const handleToggleTranslation = async () => {
+    if (!post) return;
+    const nextShowingOriginal = !showingOriginal;
+    const fetchLang = nextShowingOriginal ? post.originalLanguage : userLanguage;
+    try {
+      await fetchPost(fetchLang);
+      setShowingOriginal(nextShowingOriginal);
+    } catch {}
+  };
 
   const handleLike = async () => {
     try {
@@ -126,9 +153,12 @@ export default function PostDetailScreen() {
     if (!commentText.trim()) return;
     setSubmitting(true);
     try {
-      await boardApi.createComment(Number(postId), { content: commentText, isAnonymous: commentAnonymous, language: 'KO' });
-      const updated = await boardApi.getComments(Number(postId));
-      setComments(updated);
+      await boardApi.createComment(Number(postId), {
+        content: commentText,
+        isAnonymous: commentAnonymous,
+        language: userLanguage as any,
+      });
+      await fetchComments();
       setCommentText('');
     } catch {} finally {
       setSubmitting(false);
@@ -138,13 +168,12 @@ export default function PostDetailScreen() {
   const handleCommentLike = async (commentId: number) => {
     try {
       await boardApi.likeComment(commentId);
-      const updated = await boardApi.getComments(Number(postId));
-      setComments(updated);
+      await fetchComments();
     } catch {}
   };
 
   const handleDeletePost = () => {
-    confirmAction('게시글 삭제', '정말 삭제하시겠습니까?', async () => {
+    confirmAction(t.deletePost, t.confirmDeletePost, t.cancel, t.delete, async () => {
       try {
         await boardApi.deletePost(Number(postId));
         router.back();
@@ -153,11 +182,10 @@ export default function PostDetailScreen() {
   };
 
   const handleDeleteComment = (commentId: number) => {
-    confirmAction('댓글 삭제', '댓글을 삭제하시겠습니까?', async () => {
+    confirmAction(t.deleteComment, t.confirmDeleteComment, t.cancel, t.delete, async () => {
       try {
         await boardApi.deleteComment(commentId);
-        const updated = await boardApi.getComments(Number(postId));
-        setComments(updated);
+        await fetchComments();
       } catch {}
     });
   };
@@ -173,6 +201,9 @@ export default function PostDetailScreen() {
   }
 
   if (!post) return null;
+
+  // 원문 언어와 사용자 언어가 같으면 토글 불필요
+  const showToggle = post.originalLanguage !== userLanguage;
 
   return (
     <Screen padded={false}>
@@ -199,11 +230,26 @@ export default function PostDetailScreen() {
           <Text style={styles.postTitle}>{post.title}</Text>
           <View style={styles.postMeta}>
             <Text style={styles.metaText}>
-              {post.isAnonymous ? '익명' : post.authorName ?? '알 수 없음'}
+              {post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
             </Text>
             <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>{timeAgo(post.createdAt)}</Text>
+            <Text style={styles.metaText}>{timeAgo(post.createdAt, t)}</Text>
           </View>
+
+          {/* 번역 토글 버튼 */}
+          {showToggle && (
+            <TouchableOpacity onPress={handleToggleTranslation} style={styles.translateBtn}>
+              <Ionicons
+                name={showingOriginal ? 'language-outline' : 'document-text-outline'}
+                size={14}
+                color={Colors.primary}
+              />
+              <Text style={styles.translateBtnText}>
+                {showingOriginal ? t.viewTranslation : t.viewOriginal}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <Text style={styles.postBody}>{post.content}</Text>
 
           {post.imageUrls.length > 0 && (
@@ -232,9 +278,16 @@ export default function PostDetailScreen() {
 
         {/* 댓글 */}
         <View style={styles.commentsSection}>
-          <Text style={styles.commentsTitle}>댓글 {comments.length}</Text>
+          <Text style={styles.commentsTitle}>{t.commentsLabel(comments.length)}</Text>
           {comments.map((c) => (
-            <CommentItem key={c.commentId} comment={c} onLike={handleCommentLike} onDelete={handleDeleteComment} />
+            <CommentItem
+              key={c.commentId}
+              comment={c}
+              cancelLabel={t.cancel}
+              deleteLabel={t.delete}
+              onLike={handleCommentLike}
+              onDelete={handleDeleteComment}
+            />
           ))}
           <View style={{ height: Spacing[16] }} />
         </View>
@@ -253,14 +306,14 @@ export default function PostDetailScreen() {
               color={commentAnonymous ? Colors.primary : Colors.textTertiary}
             />
             <Text style={[styles.anonymousLabel, commentAnonymous && { color: Colors.primary }]}>
-              익명
+              {t.anonymous}
             </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.commentInputRow}>
           <TextInput
             style={styles.textInput}
-            placeholder="댓글을 입력하세요..."
+            placeholder={t.commentPlaceholder}
             placeholderTextColor={Colors.textTertiary}
             value={commentText}
             onChangeText={setCommentText}
@@ -314,6 +367,23 @@ const styles = StyleSheet.create({
   postMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing[1] },
   metaText: { fontSize: Typography.sm, color: Colors.textTertiary },
   metaDot: { fontSize: Typography.sm, color: Colors.textTertiary },
+  translateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  translateBtnText: {
+    fontSize: Typography.xs,
+    color: Colors.primary,
+    fontWeight: Typography.medium,
+  },
   postBody: {
     fontSize: Typography.base,
     color: Colors.textPrimary,

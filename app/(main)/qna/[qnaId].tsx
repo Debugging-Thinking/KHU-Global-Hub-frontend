@@ -12,13 +12,13 @@ import {
   View,
 } from 'react-native';
 
-function confirmAction(title: string, message: string, onConfirm: () => void) {
+function confirmAction(title: string, message: string, cancelLabel: string, deleteLabel: string, onConfirm: () => void) {
   if (Platform.OS === 'web') {
     if (window.confirm(`${title}\n${message}`)) onConfirm();
   } else {
     Alert.alert(title, message, [
-      { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: onConfirm },
+      { text: cancelLabel, style: 'cancel' },
+      { text: deleteLabel, style: 'destructive', onPress: onConfirm },
     ]);
   }
 }
@@ -27,23 +27,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/layout/Screen';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT, timeAgo } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { AnswerResponse, QnADetail } from '@/src/types/qna';
-
-function timeAgo(dateStr: string) {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 1) return '방금 전';
-  if (mins < 60) return `${mins}분 전`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}시간 전`;
-  return `${Math.floor(hours / 24)}일 전`;
-}
 
 function AnswerCard({
   answer,
   isQnaOwner,
   qnaId,
+  t,
   onAdopt,
   onLike,
   onDelete,
@@ -51,6 +43,7 @@ function AnswerCard({
   answer: AnswerResponse;
   isQnaOwner: boolean;
   qnaId: number;
+  t: ReturnType<typeof useT>;
   onAdopt: (answerId: number) => void;
   onLike: (answerId: number) => void;
   onDelete: (answerId: number) => void;
@@ -60,12 +53,12 @@ function AnswerCard({
       {answer.isAdopted && (
         <View style={styles.adoptedBanner}>
           <Ionicons name="checkmark-circle" size={14} color={Colors.success} />
-          <Text style={styles.adoptedBannerText}>채택된 답변</Text>
+          <Text style={styles.adoptedBannerText}>{t.adoptedAnswer}</Text>
         </View>
       )}
       <View style={styles.answerHeader}>
         <Text style={styles.answerAuthor}>{answer.authorName}</Text>
-        <Text style={styles.answerTime}>{timeAgo(answer.createdAt)}</Text>
+        <Text style={styles.answerTime}>{timeAgo(answer.createdAt, t)}</Text>
         {answer.isOwner && (
           <TouchableOpacity onPress={() => onDelete(answer.answerId)} style={{ marginLeft: 'auto' }}>
             <Ionicons name="trash-outline" size={14} color={Colors.textTertiary} />
@@ -84,7 +77,7 @@ function AnswerCard({
         </TouchableOpacity>
         {isQnaOwner && !answer.isAdopted && (
           <TouchableOpacity onPress={() => onAdopt(answer.answerId)} style={styles.adoptBtn}>
-            <Text style={styles.adoptBtnText}>채택하기</Text>
+            <Text style={styles.adoptBtnText}>{t.adopt}</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -94,41 +87,57 @@ function AnswerCard({
 
 export default function QnADetailScreen() {
   const router = useRouter();
+  const t = useT();
   const { qnaId } = useLocalSearchParams<{ qnaId: string }>();
-  const myId = useAuthStore((s) => s.profile?.memberId);
-  const language = useAuthStore((s) => s.profile?.language ?? 'KO');
+  const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
 
   const [qna, setQna] = useState<QnADetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [answerText, setAnswerText] = useState('');
   const [answerAnonymous, setAnswerAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  // 번역 토글: false = 번역본(기본), true = 원문
+  const [showingOriginal, setShowingOriginal] = useState(false);
 
   const id = Number(qnaId);
 
-  const reload = () => qnaApi.getQna(id).then(setQna);
+  const reload = async (lang?: string) => {
+    const data = await qnaApi.getQna(id, (lang ?? userLanguage) as any);
+    setQna(data);
+  };
 
   useEffect(() => {
+    setShowingOriginal(false);
     reload().finally(() => setLoading(false));
-  }, [qnaId]);
+  }, [qnaId, userLanguage]);
+
+  const handleToggleTranslation = async () => {
+    if (!qna) return;
+    const nextShowingOriginal = !showingOriginal;
+    const fetchLang = nextShowingOriginal ? qna.originalLanguage : userLanguage;
+    try {
+      await reload(fetchLang);
+      setShowingOriginal(nextShowingOriginal);
+    } catch {}
+  };
 
   const handleLikeQna = async () => {
     await qnaApi.likeQna(id);
-    reload();
+    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
   };
 
   const handleAdopt = async (answerId: number) => {
     await qnaApi.adoptAnswer(id, answerId);
-    reload();
+    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
   };
 
   const handleLikeAnswer = async (answerId: number) => {
     await qnaApi.likeAnswer(id, answerId);
-    reload();
+    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
   };
 
   const handleDeleteQna = () => {
-    confirmAction('Q&A 삭제', '정말 삭제하시겠습니까?', async () => {
+    confirmAction(t.deleteQna, t.confirmDeleteQna, t.cancel, t.delete, async () => {
       try {
         await qnaApi.deleteQna(id);
         router.back();
@@ -137,10 +146,10 @@ export default function QnADetailScreen() {
   };
 
   const handleDeleteAnswer = (answerId: number) => {
-    confirmAction('답변 삭제', '답변을 삭제하시겠습니까?', async () => {
+    confirmAction(t.deleteAnswer, t.confirmDeleteAnswer, t.cancel, t.delete, async () => {
       try {
         await qnaApi.deleteAnswer(id, answerId);
-        reload();
+        reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
       } catch {}
     });
   };
@@ -149,15 +158,15 @@ export default function QnADetailScreen() {
     if (!answerText.trim()) return;
     setSubmitting(true);
     try {
-      await qnaApi.createAnswer(id, { content: answerText, isAnonymous: answerAnonymous, language });
+      await qnaApi.createAnswer(id, { content: answerText, isAnonymous: answerAnonymous, language: userLanguage as any });
       setAnswerText('');
-      reload();
+      reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
     } catch (e: any) {
       const msg = e?.response?.data?.message;
       if (Platform.OS === 'web') {
-        window.alert(msg ?? '답변 등록에 실패했습니다.');
+        window.alert(msg ?? t.answerFailed);
       } else {
-        Alert.alert('오류', msg ?? '답변 등록에 실패했습니다.');
+        Alert.alert(t.error ?? '오류', msg ?? t.answerFailed);
       }
     } finally {
       setSubmitting(false);
@@ -175,6 +184,8 @@ export default function QnADetailScreen() {
   }
 
   if (!qna) return null;
+
+  const showToggle = qna.originalLanguage !== userLanguage;
 
   return (
     <Screen padded={false}>
@@ -199,8 +210,23 @@ export default function QnADetailScreen() {
           <View style={styles.questionMeta}>
             <Text style={styles.metaText}>{qna.authorName}</Text>
             <Text style={styles.metaDot}>·</Text>
-            <Text style={styles.metaText}>{timeAgo(qna.createdAt)}</Text>
+            <Text style={styles.metaText}>{timeAgo(qna.createdAt, t)}</Text>
           </View>
+
+          {/* 번역 토글 버튼 */}
+          {showToggle && (
+            <TouchableOpacity onPress={handleToggleTranslation} style={styles.translateBtn}>
+              <Ionicons
+                name={showingOriginal ? 'language-outline' : 'document-text-outline'}
+                size={14}
+                color={Colors.primary}
+              />
+              <Text style={styles.translateBtnText}>
+                {showingOriginal ? t.viewTranslation : t.viewOriginal}
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <Text style={styles.questionContent}>{qna.content}</Text>
           <TouchableOpacity onPress={handleLikeQna} style={styles.likeBtn}>
             <Ionicons
@@ -214,13 +240,14 @@ export default function QnADetailScreen() {
 
         {/* 답변 목록 */}
         <View style={styles.answersSection}>
-          <Text style={styles.answersTitle}>답변 {qna.answers.length}</Text>
+          <Text style={styles.answersTitle}>{t.answersLabel(qna.answers.length)}</Text>
           {qna.answers.map((a) => (
             <AnswerCard
               key={a.answerId}
               answer={a}
               isQnaOwner={qna.isOwner}
               qnaId={id}
+              t={t}
               onAdopt={handleAdopt}
               onLike={handleLikeAnswer}
               onDelete={handleDeleteAnswer}
@@ -243,14 +270,14 @@ export default function QnADetailScreen() {
               color={answerAnonymous ? Colors.primary : Colors.textTertiary}
             />
             <Text style={[styles.anonymousLabel, answerAnonymous && { color: Colors.primary }]}>
-              익명
+              {t.anonymous}
             </Text>
           </TouchableOpacity>
         </View>
         <View style={styles.inputRow}>
           <TextInput
             style={styles.input}
-            placeholder="답변을 입력하세요..."
+            placeholder={t.answerPlaceholder}
             placeholderTextColor={Colors.textTertiary}
             value={answerText}
             onChangeText={setAnswerText}
@@ -303,6 +330,23 @@ const styles = StyleSheet.create({
   questionMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing[1] },
   metaText: { fontSize: Typography.sm, color: Colors.textTertiary },
   metaDot: { fontSize: Typography.sm, color: Colors.textTertiary },
+  translateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing[1],
+    alignSelf: 'flex-start',
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  translateBtnText: {
+    fontSize: Typography.xs,
+    color: Colors.primary,
+    fontWeight: Typography.medium,
+  },
   questionContent: {
     fontSize: Typography.base,
     color: Colors.textPrimary,

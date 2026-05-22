@@ -13,6 +13,7 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { authApi, memberApi } from '@/src/api/auth';
 import { useAuthStore } from '@/src/store/authStore';
+import { useT } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { Language, MentoringRole } from '@/src/types/auth';
 
@@ -41,11 +42,13 @@ export default function ProfileSetupScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Use the locally selected language so UI updates in real-time as user picks language
+  const t = useT(language);
   const isNewStudent = admissionYear === CURRENT_YEAR;
 
   const handleSubmit = async () => {
     if (!name || !department || !nationality) {
-      setError('모든 항목을 입력해주세요.');
+      setError(t.allFieldsRequired);
       return;
     }
     const role: MentoringRole = isNewStudent ? 'MENTEE' : mentoringRole;
@@ -63,12 +66,11 @@ export default function ProfileSetupScreen() {
       const profile = await memberApi.getMe();
       setProfile(profile);
 
-      // isAuthenticated는 이미 true — 가드가 main으로 이동시킴
       const { useAuthStore: store } = await import('@/src/store/authStore');
       store.setState({ isAuthenticated: true });
       router.replace('/(main)');
     } catch (e: any) {
-      setError(e?.response?.data?.message ?? '프로필 생성에 실패했습니다.');
+      setError(e?.response?.data?.message ?? t.profileCreateFailed);
     } finally {
       setLoading(false);
     }
@@ -82,36 +84,33 @@ export default function ProfileSetupScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>프로필 설정</Text>
-          <Text style={styles.desc}>
-            KHU Global Hub에 오신 걸 환영합니다!{'\n'}
-            프로필을 완성해주세요.
-          </Text>
+          <Text style={styles.title}>{t.profileSetupTitle}</Text>
+          <Text style={styles.desc}>{t.welcomeMessage}</Text>
         </View>
 
         <View style={styles.form}>
           <Input
-            label="이름"
-            placeholder="이름을 입력하세요"
+            label={t.nameLabel}
+            placeholder={t.namePlaceholder}
             value={name}
             onChangeText={setName}
           />
           <Input
-            label="학과"
-            placeholder="예: 컴퓨터공학과"
+            label={t.department}
+            placeholder={t.departmentPlaceholder}
             value={department}
             onChangeText={setDepartment}
           />
           <Input
-            label="국적"
-            placeholder="국적을 입력하세요"
+            label={t.nationality}
+            placeholder={t.nationalityPlaceholder}
             value={nationality}
             onChangeText={setNationality}
           />
 
-          {/* 입학년도 */}
+          {/* Admission Year */}
           <View>
-            <Text style={styles.sectionLabel}>입학년도</Text>
+            <Text style={styles.sectionLabel}>{t.sectionAdmissionYear}</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -130,7 +129,7 @@ export default function ProfileSetupScreen() {
               ))}
             </ScrollView>
             {isNewStudent ? (
-              <Text style={styles.hint}>신입생은 멘티로 자동 배정됩니다</Text>
+              <Text style={styles.hint}>{t.freshmanAutoMentee}</Text>
             ) : (
               <View style={styles.roleRow}>
                 {(['MENTEE', 'MENTOR'] as MentoringRole[]).map((r) => (
@@ -140,7 +139,7 @@ export default function ProfileSetupScreen() {
                     style={[styles.chip, mentoringRole === r && styles.chipActive, styles.roleChip]}
                   >
                     <Text style={[styles.chipText, mentoringRole === r && styles.chipTextActive]}>
-                      {r === 'MENTEE' ? '멘티' : '멘토'}
+                      {r === 'MENTEE' ? t.mentee : t.mentor}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -148,9 +147,9 @@ export default function ProfileSetupScreen() {
             )}
           </View>
 
-          {/* 언어 선택 */}
+          {/* Preferred Language */}
           <View>
-            <Text style={styles.sectionLabel}>선호 언어</Text>
+            <Text style={styles.sectionLabel}>{t.sectionPreferredLanguage}</Text>
             <View style={styles.langGrid}>
               {LANGUAGES.map((l) => (
                 <TouchableOpacity
@@ -170,7 +169,7 @@ export default function ProfileSetupScreen() {
         </View>
 
         <Button
-          label="시작하기"
+          label={t.start}
           onPress={handleSubmit}
           loading={loading}
           fullWidth
