@@ -35,15 +35,6 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="qna"
-        options={{
-          title: t.tabQna,
-          tabBarIcon: ({ color, size }) => (
-            <TabIcon name="help-circle-outline" color={color} size={size} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="chat"
         options={{
           title: t.tabChat,
@@ -79,10 +70,11 @@ export default function MainLayout() {
           ),
         }}
       />
-      {/* 탭바에서 숨길 스크린들 */}
+      {/* 탭바에서 숨길 스크린들 (QnA는 메인 화면 탭으로 통합) */}
       <Tabs.Screen name="board" options={{ href: null }} />
       <Tabs.Screen name="board/[postId]" options={{ href: null }} />
       <Tabs.Screen name="board/create" options={{ href: null }} />
+      <Tabs.Screen name="qna" options={{ href: null }} />
       <Tabs.Screen name="qna/[qnaId]" options={{ href: null }} />
       <Tabs.Screen name="qna/create" options={{ href: null }} />
       <Tabs.Screen name="chat/[partnerId]" options={{ href: null }} />

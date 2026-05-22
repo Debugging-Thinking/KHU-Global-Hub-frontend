@@ -15,65 +15,80 @@ import { Ionicons } from '@expo/vector-icons';
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { boardApi } from '@/src/api/board';
+import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
-import type { BoardType, PostSummary } from '@/src/types/board';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import type { PostSummary } from '@/src/types/board';
+import type { QnASummary } from '@/src/types/qna';
 
-function BoardScreen() {
+type CommunityTab = 'BOARD' | 'QNA';
+
+function CommunityScreen() {
   const router = useRouter();
   const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
 
-  const TABS: { value: BoardType; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
-    { value: 'FRESHMAN', label: t.boardFreshman, icon: 'sparkles-outline' },
-    { value: 'FREE', label: t.boardFree, icon: 'chatbox-outline' },
-    { value: 'GRADUATE', label: t.boardGraduate, icon: 'school-outline' },
+  const TABS: { value: CommunityTab; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
+    { value: 'BOARD', label: t.boardFree, icon: 'chatbox-outline' },
+    { value: 'QNA', label: t.tabQna, icon: 'help-circle-outline' },
   ];
 
-  const [activeTab, setActiveTab] = useState<BoardType>('FRESHMAN');
+  const [activeTab, setActiveTab] = useState<CommunityTab>('BOARD');
   const [posts, setPosts] = useState<PostSummary[]>([]);
+  const [qnas, setQnas] = useState<QnASummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
-  const fetchPosts = async (tab: BoardType, pageNum: number, refresh = false) => {
+  const fetchPosts = async (pageNum: number, refresh = false) => {
     try {
-      const res = await boardApi.getPosts(tab, language as any, pageNum);
-      if (refresh || pageNum === 0) {
-        setPosts(res.content);
-      } else {
-        setPosts((prev) => [...prev, ...res.content]);
-      }
+      const res = await boardApi.getPosts(language as any, pageNum);
+      if (refresh || pageNum === 0) setPosts(res.content);
+      else setPosts((prev) => [...prev, ...res.content]);
       setHasMore(!res.last);
     } catch {}
   };
 
-  useEffect(() => {
-    setLoading(true);
-    setPage(0);
-    fetchPosts(activeTab, 0, true).finally(() => setLoading(false));
+  const fetchQnas = async () => {
+    try {
+      const res = await qnaApi.getQnas(language as any);
+      setQnas(res.content);
+    } catch {}
+  };
+
+  const loadActive = useCallback(async (refresh = false) => {
+    if (activeTab === 'BOARD') {
+      setPage(0);
+      await fetchPosts(0, refresh);
+    } else {
+      await fetchQnas();
+    }
   }, [activeTab, language]);
 
-  useFocusEffect(useCallback(() => {
-    setPage(0);
-    fetchPosts(activeTab, 0, true);
-  }, [activeTab, language]));
+  useEffect(() => {
+    setLoading(true);
+    loadActive(true).finally(() => setLoading(false));
+  }, [activeTab, language]);
+
+  useFocusEffect(useCallback(() => { loadActive(true); }, [activeTab, language]));
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    setPage(0);
-    await fetchPosts(activeTab, 0, true);
+    await loadActive(true);
     setRefreshing(false);
   };
 
   const handleLoadMore = () => {
-    if (!hasMore || loading) return;
+    if (activeTab !== 'BOARD' || !hasMore || loading) return;
     const next = page + 1;
     setPage(next);
-    fetchPosts(activeTab, next);
+    fetchPosts(next);
   };
+
+  const goCreate = () =>
+    router.push(activeTab === 'BOARD' ? '/(main)/board/create' : '/(main)/qna/create');
 
   return (
     <Screen padded={false}>
@@ -81,20 +96,21 @@ function BoardScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.lionIcon}>
-            <Ionicons name="newspaper-outline" size={18} color={Colors.textInverse} />
+            <Ionicons
+              name={activeTab === 'BOARD' ? 'newspaper-outline' : 'help-circle-outline'}
+              size={18}
+              color={Colors.textInverse}
+            />
           </View>
-          <Text style={styles.headerTitle}>{t.board}</Text>
+          <Text style={styles.headerTitle}>{activeTab === 'BOARD' ? t.board : 'Q&A'}</Text>
         </View>
-        <TouchableOpacity
-          onPress={() => router.push('/(main)/board/create')}
-          style={styles.writeBtn}
-        >
+        <TouchableOpacity onPress={goCreate} style={styles.writeBtn}>
           <Ionicons name="pencil-outline" size={17} color={Colors.primary} />
           <Text style={styles.writeBtnText}>{t.writePost}</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 탭 */}
+      {/* 자유게시판 | QnA 탭 */}
       <View style={styles.tabBar}>
         {TABS.map((tab) => (
           <Pressable
@@ -119,25 +135,17 @@ function BoardScreen() {
         <View style={styles.center}>
           <ActivityIndicator color={Colors.primary} />
         </View>
-      ) : (
+      ) : activeTab === 'BOARD' ? (
         <FlatList
           data={posts}
           keyExtractor={(item) => String(item.postId)}
           renderItem={({ item }) => (
-            <PostCard
-              post={item}
-              onPress={() => router.push(`/(main)/board/${item.postId}`)}
-              t={t}
-            />
+            <PostCard post={item} onPress={() => router.push(`/(main)/board/${item.postId}`)} t={t} />
           )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: Spacing[3] }} />}
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              tintColor={Colors.primary}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.3}
@@ -149,6 +157,25 @@ function BoardScreen() {
             </View>
           }
         />
+      ) : (
+        <FlatList
+          data={qnas}
+          keyExtractor={(item) => String(item.qnaId)}
+          renderItem={({ item }) => (
+            <QnACard item={item} onPress={() => router.push(`/(main)/qna/${item.qnaId}`)} t={t} />
+          )}
+          contentContainerStyle={styles.list}
+          ItemSeparatorComponent={() => <View style={{ height: Spacing[3] }} />}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={Colors.primary} />
+          }
+          ListEmptyComponent={
+            <View style={styles.empty}>
+              <Ionicons name="help-circle-outline" size={48} color={Colors.border} />
+              <Text style={styles.emptyText}>{t.noQuestionsYet}</Text>
+            </View>
+          }
+        />
       )}
     </Screen>
   );
@@ -157,9 +184,7 @@ function BoardScreen() {
 function PostCard({ post, onPress, t }: { post: PostSummary; onPress: () => void; t: ReturnType<typeof useT> }) {
   return (
     <Card onPress={onPress} style={styles.postCard}>
-      <Text style={styles.postTitle} numberOfLines={2}>
-        {post.title}
-      </Text>
+      <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
       <View style={styles.postMeta}>
         <Text style={styles.metaAuthor}>
           {post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
@@ -181,7 +206,38 @@ function PostCard({ post, onPress, t }: { post: PostSummary; onPress: () => void
   );
 }
 
-export default BoardScreen;
+function QnACard({ item, onPress, t }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT> }) {
+  return (
+    <Card onPress={onPress} style={styles.postCard}>
+      <View style={styles.qnaTop}>
+        <Text style={[styles.postTitle, { flex: 1 }]} numberOfLines={2}>{item.title}</Text>
+        {item.isAdopted && (
+          <View style={styles.adoptedBadge}>
+            <Ionicons name="checkmark" size={11} color={Colors.success} />
+            <Text style={styles.adoptedText}>{t.adopted}</Text>
+          </View>
+        )}
+      </View>
+      <View style={styles.postMeta}>
+        <Text style={styles.metaAuthor}>{item.authorName}</Text>
+        <Text style={styles.metaDot}>·</Text>
+        <Text style={styles.metaTime}>{timeAgo(item.createdAt, t)}</Text>
+      </View>
+      <View style={styles.postStats}>
+        <View style={styles.stat}>
+          <Ionicons name="heart-outline" size={13} color={Colors.primary} />
+          <Text style={styles.statText}>{item.likeCount}</Text>
+        </View>
+        <View style={styles.stat}>
+          <Ionicons name="chatbubble-outline" size={13} color={Colors.textTertiary} />
+          <Text style={styles.statText}>{t.answerCount(item.answerCount)}</Text>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
+export default CommunityScreen;
 
 const styles = StyleSheet.create({
   header: {
@@ -195,11 +251,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-  },
+  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing[2] },
   lionIcon: {
     width: 30,
     height: 30,
@@ -247,56 +299,41 @@ const styles = StyleSheet.create({
     borderBottomWidth: 2,
     borderBottomColor: 'transparent',
   },
-  tabActive: {
-    borderBottomColor: Colors.primary,
-    backgroundColor: Colors.primaryLight,
-  },
+  tabActive: { borderBottomColor: Colors.primary, backgroundColor: Colors.primaryLight },
   tabText: {
     fontSize: Typography.sm,
     fontWeight: Typography.medium,
     color: Colors.textTertiary,
   },
-  tabTextActive: {
-    color: Colors.primary,
-    fontWeight: Typography.bold,
-  },
-  list: {
-    padding: Spacing[5],
-    paddingBottom: Spacing[10],
-  },
-  postCard: {
-    gap: Spacing[2],
-    borderLeftWidth: 3,
-    borderLeftColor: 'transparent',
-  },
+  tabTextActive: { color: Colors.primary, fontWeight: Typography.bold },
+  list: { padding: Spacing[5], paddingBottom: Spacing[10] },
+  postCard: { gap: Spacing[2], borderLeftWidth: 3, borderLeftColor: 'transparent' },
   postTitle: {
     fontSize: Typography.base,
     fontWeight: Typography.semibold,
     color: Colors.textPrimary,
     lineHeight: Typography.base * Typography.normal,
   },
-  postMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing[1] },
-  metaAuthor: {
-    fontSize: Typography.xs,
-    color: Colors.textSecondary,
-    fontWeight: Typography.medium,
+  qnaTop: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing[2] },
+  adoptedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 2,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.successLight,
   },
+  adoptedText: { fontSize: Typography.xs, color: Colors.success, fontWeight: Typography.semibold },
+  postMeta: { flexDirection: 'row', alignItems: 'center', gap: Spacing[1] },
+  metaAuthor: { fontSize: Typography.xs, color: Colors.textSecondary, fontWeight: Typography.medium },
   metaDot: { fontSize: Typography.xs, color: Colors.textTertiary },
   metaTime: { fontSize: Typography.xs, color: Colors.textTertiary },
   postStats: { flexDirection: 'row', gap: Spacing[3] },
   stat: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   statText: { fontSize: Typography.xs, color: Colors.textTertiary },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  empty: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingTop: Spacing[16],
-    gap: Spacing[2],
-  },
-  emptyText: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.textSecondary,
-  },
+  empty: { alignItems: 'center', justifyContent: 'center', paddingTop: Spacing[16], gap: Spacing[2] },
+  emptyText: { fontSize: Typography.base, fontWeight: Typography.semibold, color: Colors.textSecondary },
   emptySubText: { fontSize: Typography.sm, color: Colors.textTertiary },
 });

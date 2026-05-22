@@ -1,6 +1,5 @@
 import apiClient, { unwrap } from './client';
 import type {
-  BoardType,
   CommentResponse,
   CreateCommentRequest,
   CreatePostRequest,
@@ -11,9 +10,9 @@ import type {
 } from '../types/board';
 
 export const boardApi = {
-  getPosts: (boardType: BoardType, language: Language = 'KO', page = 0, size = 20) =>
+  getPosts: (language: Language = 'KO', page = 0, size = 20) =>
     apiClient
-      .get('/posts', { params: { boardType, language, page, size } })
+      .get('/posts', { params: { language, page, size } })
       .then(unwrap<PageResponse<PostSummary>>),
 
   getPopular: (language: Language = 'KO') =>
@@ -26,7 +25,6 @@ export const boardApi = {
     const form = new FormData();
     form.append('title', body.title);
     form.append('content', body.content);
-    form.append('boardType', body.boardType);
     form.append('isAnonymous', String(body.isAnonymous));
     form.append('language', body.language);
     return apiClient.post('/posts', form, {

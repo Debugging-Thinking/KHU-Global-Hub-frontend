@@ -1,9 +1,7 @@
-export type BoardType = 'FRESHMAN' | 'FREE' | 'GRADUATE';
 export type Language = 'KO' | 'EN' | 'ZH' | 'VI' | 'ES' | 'MN';
 
 export interface PostSummary {
   postId: number;
-  boardType: BoardType;
   title: string;
   authorName: string | null;
   likeCount: number;
@@ -34,7 +32,6 @@ export interface CommentResponse {
 export interface CreatePostRequest {
   title: string;
   content: string;
-  boardType: BoardType;
   isAnonymous: boolean;
   language: Language;
 }

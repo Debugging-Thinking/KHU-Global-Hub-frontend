@@ -122,6 +122,12 @@ npx expo start
 
 브라우저 웹: `w` 키 / Android 에뮬레이터: `a` 키
 
+> **API 서버 주소**: 기본값은 **로컬 백엔드 `http://localhost:8080`** 입니다 (`src/api/client.ts`).
+> 로컬 백엔드만 띄우면 별도 설정 없이 바로 붙습니다.
+> 다른 서버를 보려면 `.env.local`에 `EXPO_PUBLIC_API_URL=http://...` 설정.
+> ⚠️ **운영 웹 빌드 시**(`expo export`)엔 반드시 `EXPO_PUBLIC_API_URL=http://{운영IP}:8080` 을 주입해야 합니다(미주입 시 배포본이 localhost를 가리킴).
+> 백엔드 로컬 셋업·테스트 계정은 `backend/README-local.md` 참고 (테스트 계정 demo/alice/bob/carol, pw `password123` 자동 시드).
+
 ### 6. 프론트엔드 웹 빌드 & 배포
 
 ```bash
@@ -150,10 +156,10 @@ design_thinking/
     │   ├── (auth)/                     # 로그인, 회원가입, 이메일인증, 프로필설정
     │   └── (main)/                     # 탭 기반 메인 화면
     │       ├── _layout.tsx             # 탭바 설정
-    │       ├── index.tsx               # 게시판 목록
+    │       ├── index.tsx               # 메인 — [자유게시판 | QnA] 2탭 (게시판 1종)
     │       ├── board/[postId].tsx      # 게시글 상세 + 댓글
-    │       ├── board/create.tsx        # 게시글 작성
-    │       ├── qna/                    # Q&A 목록 + 상세 + 작성
+    │       ├── board/create.tsx        # 게시글 작성 (게시판 종류 선택 없음)
+    │       ├── qna/                    # Q&A 상세 + 작성 (목록은 메인 2탭에 통합)
     │       ├── chat/                   # 채팅 목록 + 상세
     │       ├── mentoring.tsx           # 멘토링 매칭 정보
     │       └── profile.tsx             # 내 프로필
@@ -216,8 +222,8 @@ backend/src/main/java/com/khu/globalhub/
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/` | 게시글 작성 (multipart/form-data, 이미지 가능) |
-| GET | `/?boardType=FREE&language=KO` | 게시판 목록 (페이징) |
+| POST | `/` | 게시글 작성 (multipart/form-data, 이미지 가능) — boardType 없음(게시판 1종) |
+| GET | `/?language=KO` | 게시글 목록 (페이징, 게시판 1종) |
 | GET | `/popular?language=KO` | 인기 게시물 (좋아요 10개 이상) |
 | GET | `/{postId}?language=KO` | 게시글 상세 (isLiked, isOwner 포함) |
 | DELETE | `/{postId}` | 게시글 삭제 (작성자만) |
@@ -229,12 +235,10 @@ backend/src/main/java/com/khu/globalhub/
 |--------|------|------|
 | POST | `/api/posts/{postId}/comments` | 게시글 댓글 작성 (parentId 있으면 대댓글) |
 | GET | `/api/posts/{postId}/comments?language=KO` | 댓글 목록 (대댓글 포함) |
-| POST | `/api/qnas/{qnaId}/comments` | QnA 댓글 작성 |
-| GET | `/api/qnas/{qnaId}/comments?language=KO` | QnA 댓글 목록 |
-| POST | `/api/qnas/{qnaId}/answers/{answerId}/comments` | 답변 댓글 작성 |
-| GET | `/api/qnas/{qnaId}/answers/{answerId}/comments?language=KO` | 답변 댓글 목록 |
-| DELETE | `/api/comments/{commentId}` | 댓글 삭제 (공통) |
-| POST | `/api/comments/{commentId}/like` | 댓글 좋아요 토글 (공통) |
+| DELETE | `/api/comments/{commentId}` | 댓글 삭제 |
+| POST | `/api/comments/{commentId}/like` | 댓글 좋아요 토글 |
+
+> 댓글은 **게시글 전용**입니다. (QnA·답변 댓글 API는 폐기됨)
 
 ### Q&A — `/api/qnas`
 
@@ -311,7 +315,7 @@ Authorization: Bearer {accessToken}
 
 **게시글 목록 (`PostSummaryResponse`)**
 ```
-postId, boardType, title, authorName (익명이면 "익명N"),
+postId, title, authorName (익명이면 "익명N"),
 likeCount, commentCount, createdAt, isAnonymous
 ```
 

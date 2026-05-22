@@ -1,8 +1,11 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// 운영 서버 주소 (HTTP — AndroidManifest usesCleartextTraffic 필요)
-export const BASE_URL = 'http://13.125.205.177:8080';
+// API 서버 주소.
+// - 기본값(개발): 로컬 백엔드 http://localhost:8080 — 별도 설정 없이 로컬 풀스택 개발이 바로 동작.
+// - 운영/배포 빌드: `expo export` 전에 EXPO_PUBLIC_API_URL=http://{운영IP}:8080 을 반드시 주입할 것!
+//   (미주입 시 배포본이 localhost를 가리켜 동작 안 함. HTTP라 Android는 usesCleartextTraffic 필요.)
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080';
 
 const apiClient = axios.create({
   baseURL: `${BASE_URL}/api`,

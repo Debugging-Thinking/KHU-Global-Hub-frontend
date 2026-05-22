@@ -16,21 +16,13 @@ import { Button } from '@/src/components/ui/Button';
 import { boardApi } from '@/src/api/board';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import type { BoardType } from '@/src/types/board';
+import { Colors, Spacing, Typography } from '@/constants/theme';
 
 export default function CreatePostScreen() {
   const router = useRouter();
   const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
 
-  const BOARD_TYPES: { value: BoardType; label: string }[] = [
-    { value: 'FRESHMAN', label: t.boardFreshman },
-    { value: 'FREE', label: t.boardFree },
-    { value: 'GRADUATE', label: t.boardGraduate },
-  ];
-
-  const [boardType, setBoardType] = useState<BoardType>('FREE');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
@@ -38,7 +30,6 @@ export default function CreatePostScreen() {
   const [error, setError] = useState('');
 
   useFocusEffect(useCallback(() => {
-    setBoardType('FREE');
     setTitle('');
     setContent('');
     setIsAnonymous(false);
@@ -53,7 +44,7 @@ export default function CreatePostScreen() {
     setError('');
     setLoading(true);
     try {
-      await boardApi.createPost({ title, content, boardType, isAnonymous, language: language as any });
+      await boardApi.createPost({ title, content, isAnonymous, language: language as any });
       router.back();
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t.createPostFailed);
@@ -74,24 +65,6 @@ export default function CreatePostScreen() {
       </View>
 
       <ScrollView style={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* 게시판 선택 */}
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>{t.boardLabel}</Text>
-          <View style={styles.chips}>
-            {BOARD_TYPES.map((bt) => (
-              <TouchableOpacity
-                key={bt.value}
-                onPress={() => setBoardType(bt.value)}
-                style={[styles.chip, boardType === bt.value && styles.chipActive]}
-              >
-                <Text style={[styles.chipText, boardType === bt.value && styles.chipTextActive]}>
-                  {bt.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
         {/* 제목 */}
         <View style={styles.titleInput}>
           <TextInput
@@ -150,28 +123,6 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   scroll: { flex: 1, backgroundColor: Colors.surface },
-  section: {
-    padding: Spacing[5],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.divider,
-  },
-  sectionLabel: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.semibold,
-    color: Colors.textSecondary,
-    marginBottom: Spacing[2],
-  },
-  chips: { flexDirection: 'row', gap: Spacing[2] },
-  chip: {
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[2],
-    borderRadius: Radius.full,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  chipActive: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  chipText: { fontSize: Typography.sm, color: Colors.textSecondary, fontWeight: Typography.medium },
-  chipTextActive: { color: Colors.primary },
   titleInput: {
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[4],
