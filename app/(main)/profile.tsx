@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import {
   Alert,
   Image,
@@ -31,6 +32,9 @@ import { memberApi } from '@/src/api/auth';
 import { useT } from '@/src/i18n';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { Language, MentoringRole } from '@/src/types/auth';
+import { badgeApi } from '@/src/api/badge';
+import { BADGE_META } from '@/src/types/badge';
+import type { BadgeId, BadgeInfo } from '@/src/types/badge';
 
 const LANG_LABELS: Record<string, string> = {
   KO: '한국어', EN: 'English', ZH: '中文',
@@ -83,6 +87,15 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [earnedBadges, setEarnedBadges] = useState<BadgeInfo[]>([]);
+
+  useFocusEffect(
+    useCallback(() => {
+      badgeApi.getMyBadges()
+        .then(setEarnedBadges)
+        .catch(() => {});
+    }, [])
+  );
 
   const handleEditStart = () => {
     if (!profile) return;
@@ -211,17 +224,28 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* 경희 온도 — 구조만 (퀴즈·멘토링·참여도 점수 나중에 연결) */}
       {!isEditing && (
-        <View style={styles.tempCard}>
-          <View style={styles.tempRow}>
-            <Ionicons name="thermometer-outline" size={18} color={Colors.accent} />
-            <Text style={styles.tempLabel}>경희 온도</Text>
-            <View style={styles.tempBadge}>
-              <Text style={styles.tempValue}>--°</Text>
-            </View>
+        <View style={styles.badgeSection}>
+          <Text style={styles.badgeSectionTitle}>내 뱃지</Text>
+          <View style={styles.badgeGrid}>
+            {(Object.keys(BADGE_META) as BadgeId[]).map((badgeId) => {
+              const meta = BADGE_META[badgeId];
+              const earned = earnedBadges.find((b) => b.badgeId === badgeId);
+              return (
+                <View
+                  key={badgeId}
+                  style={[styles.badgeItem, earned ? styles.badgeItemEarned : styles.badgeItemLocked]}
+                >
+                  <Text style={[styles.badgeEmoji, !earned && styles.badgeEmojiLocked]}>
+                    {earned ? meta.emoji : '🔒'}
+                  </Text>
+                  <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]}>
+                    {meta.nameKO}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
-          <Text style={styles.tempHint}>퀴즈 점수·멘토링 참여도 등이 반영될 예정이에요</Text>
         </View>
       )}
 
@@ -478,43 +502,49 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
   logoutBtn: { marginBottom: Spacing[8] },
-  tempCard: {
+  badgeSection: {
     backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing[4],
     marginBottom: Spacing[4],
-    borderWidth: 1,
-    borderColor: Colors.accentLight,
     ...Shadow.sm,
   },
-  tempRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[2],
-    marginBottom: Spacing[1],
-  },
-  tempLabel: {
-    flex: 1,
+  badgeSectionTitle: {
     fontSize: Typography.base,
     fontWeight: Typography.semibold,
     color: Colors.textPrimary,
+    marginBottom: Spacing[3],
   },
-  tempBadge: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[1],
-    backgroundColor: Colors.accentLight,
-    borderRadius: Radius.full,
+  badgeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[3],
   },
-  tempValue: {
-    fontSize: Typography.base,
-    fontWeight: Typography.bold,
-    color: Colors.accent,
+  badgeItem: {
+    width: '45%',
+    alignItems: 'center',
+    padding: Spacing[3],
+    borderRadius: Radius.md,
+    borderWidth: 1.5,
+    gap: Spacing[1],
   },
-  tempHint: {
+  badgeItemEarned: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  badgeItemLocked: {
+    borderColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  badgeEmoji: { fontSize: 28 },
+  badgeEmojiLocked: { opacity: 0.4 },
+  badgeName: {
     fontSize: Typography.xs,
-    color: Colors.textTertiary,
-    marginLeft: Spacing[7],
+    fontWeight: Typography.semibold,
+    color: Colors.primary,
+    textAlign: 'center',
   },
+  badgeNameLocked: { color: Colors.textTertiary },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.9)',

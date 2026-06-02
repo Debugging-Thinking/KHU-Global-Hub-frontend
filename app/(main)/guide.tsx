@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   Linking,
   ScrollView,
@@ -8,11 +8,13 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { KHU_GUIDE, GuideCategory, GuideTip } from '@/src/data/khuGuide';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { badgeApi } from '@/src/api/badge';
+import type { BadgeId } from '@/src/types/badge';
 
 type Language = 'KO' | 'EN';
 
@@ -81,10 +83,12 @@ function HomeView({
   lang,
   onSelectCategory,
   onQuiz,
+  earnedBadges,
 }: {
   lang: Language;
   onSelectCategory: (id: string) => void;
-  onQuiz: () => void;
+  onQuiz: (categoryId: string) => void;
+  earnedBadges: Set<BadgeId>;
 }) {
   return (
     <ScrollView
@@ -111,37 +115,35 @@ function HomeView({
         {lang === 'KO' ? '카테고리' : 'Categories'}
       </Text>
       <View style={styles.grid}>
-        {KHU_GUIDE.map((cat) => (
-          <TouchableOpacity
-            key={cat.id}
-            style={[styles.categoryCard, { borderTopColor: cat.color }]}
-            onPress={() => onSelectCategory(cat.id)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-            <Text style={styles.categoryTitle}>
-              {lang === 'KO' ? cat.titleKO : cat.titleEN}
-            </Text>
-            <Text style={[styles.categoryCount, { color: cat.color }]}>
-              {cat.tips.length}{lang === 'KO' ? '개' : ''}
-            </Text>
-          </TouchableOpacity>
-        ))}
-
-        {/* 퀴즈 버튼 */}
-        <TouchableOpacity
-          style={[styles.categoryCard, styles.quizCard]}
-          onPress={onQuiz}
-          activeOpacity={0.8}
-        >
-          <Text style={styles.categoryEmoji}>🧩</Text>
-          <Text style={[styles.categoryTitle, { color: Colors.textInverse }]}>
-            {lang === 'KO' ? '퀴즈' : 'Quiz'}
-          </Text>
-          <Text style={[styles.categoryCount, { color: 'rgba(255,255,255,0.7)' }]}>
-            {lang === 'KO' ? '도전하기' : 'Take Quiz'}
-          </Text>
-        </TouchableOpacity>
+        {KHU_GUIDE.map((cat) => {
+          const earned = earnedBadges.has(cat.id as BadgeId);
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.categoryCard, { borderTopColor: cat.color }]}
+              onPress={() => onSelectCategory(cat.id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
+              <Text style={styles.categoryTitle}>
+                {lang === 'KO' ? cat.titleKO : cat.titleEN}
+              </Text>
+              {earned ? (
+                <Text style={[styles.categoryCount, { color: cat.color }]}>🏅 획득!</Text>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.quizSmallBtn, { borderColor: cat.color }]}
+                  onPress={(e) => { e.stopPropagation(); onQuiz(cat.id); }}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.quizSmallBtnText, { color: cat.color }]}>
+                    {lang === 'KO' ? '퀴즈' : 'Quiz'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       <View style={{ height: Spacing[8] }} />
@@ -154,7 +156,16 @@ function HomeView({
 export default function GuideScreen() {
   const [lang, setLang] = useState<Language>('KO');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [earnedBadges, setEarnedBadges] = useState<Set<BadgeId>>(new Set());
   const router = useRouter();
+
+  useFocusEffect(
+    useCallback(() => {
+      badgeApi.getMyBadges()
+        .then((badges) => setEarnedBadges(new Set(badges.map((b) => b.badgeId as BadgeId))))
+        .catch(() => {});
+    }, [])
+  );
 
   const selectedCategory = selectedCategoryId
     ? KHU_GUIDE.find((c) => c.id === selectedCategoryId) ?? null
@@ -199,7 +210,8 @@ export default function GuideScreen() {
         <HomeView
           lang={lang}
           onSelectCategory={setSelectedCategoryId}
-          onQuiz={() => router.push('/(main)/quiz')}
+          onQuiz={(categoryId) => router.push(`/(main)/quiz?category=${categoryId}`)}
+          earnedBadges={earnedBadges}
         />
       )}
     </Screen>
@@ -305,10 +317,6 @@ const styles = StyleSheet.create({
     gap: Spacing[1],
     ...Shadow.sm,
   },
-  quizCard: {
-    backgroundColor: Colors.primary,
-    borderTopColor: 'transparent',
-  },
   categoryEmoji: { fontSize: 26, marginBottom: Spacing[1] },
   categoryTitle: {
     fontSize: Typography.sm,
@@ -319,6 +327,15 @@ const styles = StyleSheet.create({
     fontSize: Typography.xs,
     fontWeight: Typography.medium,
   },
+  quizSmallBtn: {
+    borderWidth: 1,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing[2],
+    paddingVertical: 2,
+    alignSelf: 'flex-start',
+    marginTop: Spacing[1],
+  },
+  quizSmallBtnText: { fontSize: Typography.xs, fontWeight: Typography.semibold },
 
   // 카테고리 상세
   detailScroll: { flex: 1 },
