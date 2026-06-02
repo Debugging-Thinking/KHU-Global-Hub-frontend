@@ -10,13 +10,17 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { quizApi } from '@/src/api/quiz';
+import { badgeApi } from '@/src/api/badge';
 import { KHU_GUIDE } from '@/src/data/khuGuide';
-import { LOCAL_QUIZ_QUESTIONS, gradeLocally } from '@/src/data/quizQuestions';
+import { LOCAL_QUIZ_QUESTIONS, getQuestionsByCategory, gradeLocally } from '@/src/data/quizQuestions';
+import { BADGE_META } from '@/src/types/badge';
+import type { BadgeId } from '@/src/types/badge';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { QuizAnswerItem, QuizQuestion, QuizSubmitResponse } from '@/src/types/quiz';
 
@@ -157,11 +161,15 @@ function QuizView({
 function ResultView({
   response,
   questions,
+  category,
+  categoryId,
   onRetry,
   onHome,
 }: {
   response: QuizSubmitResponse;
   questions: QuizQuestion[];
+  category?: string;
+  categoryId?: BadgeId;
   onRetry: () => void;
   onHome: () => void;
 }) {
@@ -192,6 +200,17 @@ function ResultView({
             : '가이드를 다시 읽어보고 재도전해 보세요!'}
         </Text>
       </View>
+
+      {response.score >= 70 && category && categoryId && (
+        <View style={styles.badgeEarned}>
+          <Text style={styles.badgeEarnedEmoji}>
+            {BADGE_META[categoryId]?.emoji ?? '🏅'}
+          </Text>
+          <Text style={styles.badgeEarnedText}>
+            {BADGE_META[categoryId]?.nameKO} 획득!
+          </Text>
+        </View>
+      )}
 
       {/* 문제별 정오 */}
       <Text style={styles.breakdownTitle}>문제별 결과</Text>
@@ -315,11 +334,17 @@ function HomeView({
 // ─── Main ─────────────────────────────────────────────────────────
 
 export default function QuizScreen() {
+  const { category } = useLocalSearchParams<{ category?: string }>();
+  const categoryId = (category ?? '') as BadgeId;
   const [view, setView] = useState<View>('home');
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [fetchedQuestions, setFetchedQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuizSubmitResponse | null>(null);
   const [attemptsUsed, setAttemptsUsed] = useState(0);
+
+  const questions = category
+    ? getQuestionsByCategory(category)
+    : fetchedQuestions;
 
   useEffect(() => {
     (async () => {
@@ -337,14 +362,14 @@ export default function QuizScreen() {
   const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsUsed);
 
   const loadQuestions = async () => {
-    if (questions.length > 0) return questions;
+    if (fetchedQuestions.length > 0) return fetchedQuestions;
     setLoading(true);
     try {
       const qs = await quizApi.getQuestions();
-      setQuestions(qs);
+      setFetchedQuestions(qs);
       return qs;
     } catch {
-      setQuestions(LOCAL_QUIZ_QUESTIONS);
+      setFetchedQuestions(LOCAL_QUIZ_QUESTIONS);
       return LOCAL_QUIZ_QUESTIONS;
     } finally {
       setLoading(false);
@@ -353,8 +378,12 @@ export default function QuizScreen() {
 
   const handleStartQuiz = async () => {
     if (attemptsLeft <= 0) return;
-    const qs = await loadQuestions();
-    if (qs.length > 0) setView('quiz');
+    if (category) {
+      setView('quiz');
+    } else {
+      const qs = await loadQuestions();
+      if (qs.length > 0) setView('quiz');
+    }
   };
 
   const handleFinish = async (response: QuizSubmitResponse) => {
@@ -363,12 +392,15 @@ export default function QuizScreen() {
     await AsyncStorage.setItem(ATTEMPT_KEY, String(newCount));
     setResult(response);
     setView('result');
+    if (category && response.score >= 70) {
+      badgeApi.earnBadge(categoryId).catch(() => {});
+    }
   };
 
   if (view === 'quiz' && questions.length > 0)
     return <QuizView questions={questions} onFinish={handleFinish} />;
   if (view === 'result' && result)
-    return <ResultView response={result} questions={questions} onRetry={() => { setResult(null); setView('home'); }} onHome={() => setView('home')} />;
+    return <ResultView response={result} questions={questions} category={category} categoryId={category ? categoryId : undefined} onRetry={() => { setResult(null); setView('home'); }} onHome={() => setView('home')} />;
 
   return (
     <HomeView
@@ -656,4 +688,21 @@ const styles = StyleSheet.create({
   infoCard: { gap: Spacing[3] },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing[2] },
   infoText: { fontSize: Typography.sm, color: Colors.textSecondary },
+
+  // Badge earned
+  badgeEarned: {
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    marginVertical: Spacing[3],
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  badgeEarnedEmoji: { fontSize: 40, marginBottom: Spacing[2] },
+  badgeEarnedText: {
+    fontSize: Typography.lg,
+    fontWeight: Typography.bold,
+    color: Colors.primary,
+  },
 });
