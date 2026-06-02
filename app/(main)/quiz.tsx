@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -251,19 +250,14 @@ function ResultView({
   );
 }
 
-const MAX_ATTEMPTS = 3;
-const ATTEMPT_KEY = 'khu_quiz_attempts';
-
 // ─── Home: 랜딩 ───────────────────────────────────────────────────
 
 function HomeView({
   onQuiz,
   loading,
-  attemptsLeft,
 }: {
   onQuiz: () => void;
   loading: boolean;
-  attemptsLeft: number;
 }) {
   const router = useRouter();
 
@@ -299,28 +293,20 @@ function HomeView({
       </View>
 
       <View style={styles.actionArea}>
-        {attemptsLeft > 0 ? (
-          <Button
-            label={loading ? '문제 불러오는 중...' : `퀴즈 시작하기 →  (${attemptsLeft}회 남음)`}
-            onPress={onQuiz}
-            disabled={loading}
-            fullWidth
-            size="lg"
-            style={styles.quizStartBtn}
-          />
-        ) : (
-          <View style={styles.lockedBox}>
-            <Ionicons name="lock-closed" size={22} color={Colors.textTertiary} />
-            <Text style={styles.lockedText}>도전 기회를 모두 사용했습니다</Text>
-            <Text style={styles.lockedSub}>최고 점수가 경희 온도에 반영됩니다</Text>
-          </View>
-        )}
+        <Button
+          label={loading ? '문제 불러오는 중...' : '퀴즈 시작하기 →'}
+          onPress={onQuiz}
+          disabled={loading}
+          fullWidth
+          size="lg"
+          style={styles.quizStartBtn}
+        />
       </View>
 
       <Card style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Ionicons name="help-circle-outline" size={18} color={Colors.accent} />
-          <Text style={styles.infoText}>총 14문제 · 객관식 4지선다 · 최대 3회 도전</Text>
+          <Text style={styles.infoText}>총 14문제 · 객관식 4지선다</Text>
         </View>
         <View style={styles.infoRow}>
           <Ionicons name="trophy-outline" size={18} color={Colors.accent} />
@@ -340,26 +326,10 @@ export default function QuizScreen() {
   const [fetchedQuestions, setFetchedQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuizSubmitResponse | null>(null);
-  const [attemptsUsed, setAttemptsUsed] = useState(0);
 
   const questions = category
     ? getQuestionsByCategory(category)
     : fetchedQuestions;
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const results = await quizApi.getMyResults();
-        setAttemptsUsed(results.length);
-        await AsyncStorage.setItem(ATTEMPT_KEY, String(results.length));
-      } catch {
-        const stored = await AsyncStorage.getItem(ATTEMPT_KEY);
-        setAttemptsUsed(stored ? parseInt(stored, 10) : 0);
-      }
-    })();
-  }, []);
-
-  const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsUsed);
 
   const loadQuestions = async () => {
     if (fetchedQuestions.length > 0) return fetchedQuestions;
@@ -377,7 +347,6 @@ export default function QuizScreen() {
   };
 
   const handleStartQuiz = async () => {
-    if (attemptsLeft <= 0) return;
     if (category) {
       setView('quiz');
     } else {
@@ -387,9 +356,6 @@ export default function QuizScreen() {
   };
 
   const handleFinish = async (response: QuizSubmitResponse) => {
-    const newCount = attemptsUsed + 1;
-    setAttemptsUsed(newCount);
-    await AsyncStorage.setItem(ATTEMPT_KEY, String(newCount));
     setResult(response);
     setView('result');
     if (category && response.score >= 70) {
@@ -406,7 +372,6 @@ export default function QuizScreen() {
     <HomeView
       onQuiz={handleStartQuiz}
       loading={loading}
-      attemptsLeft={attemptsLeft}
     />
   );
 }
@@ -548,26 +513,6 @@ const styles = StyleSheet.create({
   optionIndexText: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.textSecondary },
   optionText: { flex: 1, fontSize: Typography.base, color: Colors.textPrimary },
   nextBtn: { marginTop: 'auto' },
-  lockedBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing[2],
-    padding: Spacing[5],
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceSecondary,
-  },
-  lockedText: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.textSecondary,
-  },
-  lockedSub: {
-    fontSize: Typography.sm,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-  },
 
   // Result
   resultBanner: {
