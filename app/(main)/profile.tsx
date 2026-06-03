@@ -109,7 +109,16 @@ export default function ProfileScreen() {
     setSaving(true);
     setError('');
     try {
-      const updated = await memberApi.updateMe({ name, department, nationality, admissionYear, language, mentoringRole });
+      const isNewStudent = admissionYear === CURRENT_YEAR;
+      const updated = await memberApi.updateMe({
+        name,
+        department,
+        nationality,
+        admissionYear,
+        language,
+        // 신입생은 mentoringRole 전송하지 않음 (백엔드에서도 MENTEE 고정)
+        ...(isNewStudent ? {} : { mentoringRole }),
+      });
       setProfile(updated);
       setIsEditing(false);
     } catch (e: any) {
