@@ -208,7 +208,7 @@ export default function MentoringScreen() {
                   style={styles.menuItem}
                   onPress={() => {
                     setPopupVisible(false);
-                    router.push(`/(main)/chat/${match.partner.memberId}`);
+                    router.push({ pathname: "/(main)/chat", params: { highlightPartnerId: String(match.partner.memberId) } });
                   }}
                 >
                   <View style={[styles.menuIcon, { backgroundColor: Colors.successLight }]}>
