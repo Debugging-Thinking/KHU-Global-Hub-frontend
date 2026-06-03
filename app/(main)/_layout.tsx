@@ -1,11 +1,11 @@
-import { Tabs } from 'expo-router';
-import { Platform, StyleSheet } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import { Tabs } from "expo-router";
+import { Platform, StyleSheet } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-import { Colors, Shadow } from '@/constants/theme';
-import { useT } from '@/src/i18n';
+import { Colors, Shadow } from "@/constants/theme";
+import { useT } from "@/src/i18n";
 
-type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
 function TabIcon({ name, color, size }: { name: IoniconName; color: string; size: number }) {
   return <Ionicons name={name} size={size} color={color} />;
@@ -55,7 +55,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="quiz"
         options={{
-          title: '퀴즈',
+          title: "퀴즈",
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="school-outline" color={color} size={size} />
           ),
@@ -70,7 +70,10 @@ export default function MainLayout() {
           ),
         }}
       />
-      {/* 탭바에서 숨길 스크린들 (QnA는 메인 화면 탭으로 통합) */}
+      {/* 탭 바에서 숨길 스크린들 */}
+      <Tabs.Screen name="mentoring-activity" options={{ href: null }} />
+      <Tabs.Screen name="mentoring-activity-create" options={{ href: null }} />
+      <Tabs.Screen name="mentor-profile" options={{ href: null }} />
       <Tabs.Screen name="board" options={{ href: null }} />
       <Tabs.Screen name="board/[postId]" options={{ href: null }} />
       <Tabs.Screen name="board/create" options={{ href: null }} />
@@ -87,13 +90,13 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: Colors.divider,
-    height: Platform.OS === 'ios' ? 88 : 68,
-    paddingBottom: Platform.OS === 'ios' ? 28 : 10,
+    height: Platform.OS === "ios" ? 88 : 68,
+    paddingBottom: Platform.OS === "ios" ? 28 : 10,
     paddingTop: 8,
     ...Shadow.md,
   },
   tabLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });
