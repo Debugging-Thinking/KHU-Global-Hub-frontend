@@ -1,0 +1,295 @@
+import { useLocalSearchParams, useRouter } from "expo-router";
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+
+import { Screen } from "@/src/components/layout/Screen";
+import apiClient, { unwrap } from "@/src/api/client";
+import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+
+interface PartnerProfile {
+  memberId: number;
+  name: string;
+  profileImageUrl: string | null;
+  department: string;
+  nationality: string;
+  language: string;
+  mentoringRole: string;
+  admissionYear: number;
+  bio: string | null;
+}
+
+const LANGUAGE_LABEL: Record<string, string> = {
+  KO: "Korean",
+  EN: "English",
+  ZH: "Chinese",
+  VI: "Vietnamese",
+  ES: "Spanish",
+  MN: "Mongolian",
+};
+
+const ROLE_LABEL: Record<string, string> = {
+  MENTOR: "멘토",
+  MENTEE: "멘티",
+};
+
+export default function MentorProfileScreen() {
+  const { memberId } = useLocalSearchParams<{ memberId: string }>();
+  const router = useRouter();
+  const [profile, setProfile] = useState<PartnerProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!memberId) return;
+    apiClient
+      .get(`/members/${memberId}`)
+      .then((r) => setProfile(unwrap(r)))
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
+  }, [memberId]);
+
+  const roleColor =
+    profile?.mentoringRole === "MENTOR" ? Colors.accent : Colors.primary;
+
+  return (
+    <Screen>
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>프로필 정보</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={Colors.primary} size="large" />
+        </View>
+      ) : error || !profile ? (
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={Colors.border} />
+          <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
+        </View>
+      ) : (
+        <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
+
+          {/* 프로필 사진 + 이름 + 역할 */}
+          <View style={styles.heroSection}>
+            {profile.profileImageUrl ? (
+              <Image source={{ uri: profile.profileImageUrl }} style={styles.avatar} />
+            ) : (
+              <View style={styles.avatarPlaceholder}>
+                <Text style={styles.avatarText}>{profile.name[0]}</Text>
+              </View>
+            )}
+            <Text style={styles.name}>{profile.name}</Text>
+            <View style={[styles.roleBadge, { backgroundColor: roleColor + "20" }]}>
+              <Ionicons
+                name={profile.mentoringRole === "MENTOR" ? "school-outline" : "person-outline"}
+                size={16}
+                color={roleColor}
+              />
+              <Text style={[styles.roleText, { color: roleColor }]}>
+                {ROLE_LABEL[profile.mentoringRole] ?? profile.mentoringRole}
+              </Text>
+            </View>
+          </View>
+
+          {/* 상세 정보 카드 */}
+          <View style={styles.infoCard}>
+
+            {/* 학과 */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="school-outline" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>학과</Text>
+                <Text style={styles.infoValue}>{profile.department}</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* 국적 */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="globe-outline" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>국적</Text>
+                <Text style={styles.infoValue}>{profile.nationality}</Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* 언어 */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>사용 언어</Text>
+                <Text style={styles.infoValue}>
+                  {LANGUAGE_LABEL[profile.language] ?? profile.language}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.divider} />
+
+            {/* 자기소개 */}
+            <View style={styles.infoRow}>
+              <View style={styles.infoIconWrap}>
+                <Ionicons name="person-circle-outline" size={20} color={Colors.primary} />
+              </View>
+              <View style={styles.infoContent}>
+                <Text style={styles.infoLabel}>자기소개</Text>
+                <Text style={[styles.infoValue, !profile.bio && styles.infoValueEmpty]}>
+                  {profile.bio ?? "아직 자기소개가 없습니다."}
+                </Text>
+              </View>
+            </View>
+
+          </View>
+        </ScrollView>
+      )}
+    </Screen>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[3],
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  headerTitle: {
+    fontSize: Typography.lg,
+    fontWeight: Typography.bold,
+    color: Colors.textPrimary,
+  },
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing[3],
+  },
+  errorText: {
+    fontSize: Typography.base,
+    color: Colors.textSecondary,
+  },
+  body: {
+    paddingHorizontal: Spacing[5],
+    paddingTop: Spacing[8],
+    paddingBottom: Spacing[10],
+    gap: Spacing[6],
+  },
+  heroSection: {
+    alignItems: "center",
+    gap: Spacing[3],
+  },
+  avatar: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: Colors.primaryLight,
+  },
+  avatarPlaceholder: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: Colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: Colors.primary + "30",
+  },
+  avatarText: {
+    fontSize: 40,
+    fontWeight: Typography.bold,
+    color: Colors.primary,
+  },
+  name: {
+    fontSize: Typography["2xl"],
+    fontWeight: Typography.bold,
+    color: Colors.textPrimary,
+  },
+  roleBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[1],
+    paddingHorizontal: Spacing[4],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+  },
+  roleText: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+  },
+  infoCard: {
+    backgroundColor: Colors.background,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    paddingVertical: Spacing[4],
+    paddingHorizontal: Spacing[5],
+    gap: Spacing[4],
+  },
+  infoIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primaryLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  infoContent: { flex: 1, gap: 4 },
+  infoLabel: {
+    fontSize: Typography.xs,
+    color: Colors.textTertiary,
+    fontWeight: Typography.semibold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: Typography.base,
+    color: Colors.textPrimary,
+    lineHeight: Typography.base * 1.5,
+  },
+  infoValueEmpty: {
+    color: Colors.textTertiary,
+    fontStyle: "italic",
+  },
+  divider: {
+    height: 1,
+    backgroundColor: Colors.backgroundSecondary,
+    marginHorizontal: Spacing[5],
+  },
+});
