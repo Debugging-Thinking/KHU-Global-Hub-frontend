@@ -53,11 +53,11 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
-        name="quiz"
+        name="guide"
         options={{
-          title: "퀴즈",
+          title: '가이드',
           tabBarIcon: ({ color, size }) => (
-            <TabIcon name="school-outline" color={color} size={size} />
+            <TabIcon name="book-outline" color={color} size={size} />
           ),
         }}
       />
@@ -70,7 +70,8 @@ export default function MainLayout() {
           ),
         }}
       />
-      {/* 탭 바에서 숨길 스크린들 */}
+      {/* 탭바에서 숨길 스크린들 (QnA는 메인 탭으로 통합, 퀴즈는 가이드 안에서 진입) */}
+      <Tabs.Screen name="quiz" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity-create" options={{ href: null }} />
       <Tabs.Screen name="mentor-profile" options={{ href: null }} />

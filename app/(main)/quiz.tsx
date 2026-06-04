@@ -1,80 +1,29 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Linking } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useLocalSearchParams } from 'expo-router';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { quizApi } from '@/src/api/quiz';
+import { badgeApi } from '@/src/api/badge';
 import { KHU_GUIDE } from '@/src/data/khuGuide';
-import { LOCAL_QUIZ_QUESTIONS, gradeLocally } from '@/src/data/quizQuestions';
+import { LOCAL_QUIZ_QUESTIONS, getQuestionsByCategory, gradeLocally } from '@/src/data/quizQuestions';
+import { BADGE_META } from '@/src/types/badge';
+import type { BadgeId } from '@/src/types/badge';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { QuizAnswerItem, QuizQuestion, QuizSubmitResponse } from '@/src/types/quiz';
 
-type View = 'home' | 'guide' | 'quiz' | 'result';
-
-// ─── Guide: 카테고리 카드 ─────────────────────────────────────────
-
-function GuideView({ onBack }: { onBack: () => void }) {
-  const [expanded, setExpanded] = useState<string | null>(null);
-
-  return (
-    <Screen scrollable padded>
-      <TouchableOpacity onPress={onBack} style={styles.backRow}>
-        <Ionicons name="arrow-back" size={20} color={Colors.primary} />
-        <Text style={styles.backText}>돌아가기</Text>
-      </TouchableOpacity>
-
-      <Text style={styles.pageTitle}>경희대 꿀팁 가이드</Text>
-      <Text style={styles.pageSubtitle}>퀴즈 전 미리 공부해 두세요!</Text>
-
-      {KHU_GUIDE.map((cat) => (
-        <View key={cat.id} style={styles.categoryBlock}>
-          <TouchableOpacity
-            style={[styles.categoryHeader, { borderLeftColor: cat.color }]}
-            onPress={() => setExpanded(expanded === cat.id ? null : cat.id)}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
-            <Text style={styles.categoryTitle}>{cat.title}</Text>
-            <Text style={styles.tipCount}>{cat.tips.length}개 팁</Text>
-            <Ionicons
-              name={expanded === cat.id ? 'chevron-up' : 'chevron-down'}
-              size={18}
-              color={Colors.textTertiary}
-            />
-          </TouchableOpacity>
-
-          {expanded === cat.id && (
-            <View style={styles.tipsContainer}>
-              {cat.tips.map((tip, i) => (
-                <View key={i} style={styles.tipCard}>
-                  <Text style={styles.tipIcon}>{tip.icon}</Text>
-                  <View style={styles.tipBody}>
-                    <Text style={styles.tipTitle}>{tip.title}</Text>
-                    <Text style={styles.tipContent}>{tip.content}</Text>
-                  </View>
-                </View>
-              ))}
-            </View>
-          )}
-        </View>
-      ))}
-
-      <View style={{ height: Spacing[8] }} />
-    </Screen>
-  );
-}
+type View = 'home' | 'quiz' | 'result';
 
 // ─── Quiz: 문제 풀기 ──────────────────────────────────────────────
 
@@ -211,11 +160,15 @@ function QuizView({
 function ResultView({
   response,
   questions,
+  category,
+  categoryId,
   onRetry,
   onHome,
 }: {
   response: QuizSubmitResponse;
   questions: QuizQuestion[];
+  category?: string;
+  categoryId?: BadgeId;
   onRetry: () => void;
   onHome: () => void;
 }) {
@@ -246,6 +199,17 @@ function ResultView({
             : '가이드를 다시 읽어보고 재도전해 보세요!'}
         </Text>
       </View>
+
+      {response.score >= 70 && category && categoryId && (
+        <View style={styles.badgeEarned}>
+          <Text style={styles.badgeEarnedEmoji}>
+            {BADGE_META[categoryId]?.emoji ?? '🏅'}
+          </Text>
+          <Text style={styles.badgeEarnedText}>
+            {BADGE_META[categoryId]?.nameKO} 획득!
+          </Text>
+        </View>
+      )}
 
       {/* 문제별 정오 */}
       <Text style={styles.breakdownTitle}>문제별 결과</Text>
@@ -286,37 +250,35 @@ function ResultView({
   );
 }
 
-const MAX_ATTEMPTS = 3;
-const ATTEMPT_KEY = 'khu_quiz_attempts';
-
 // ─── Home: 랜딩 ───────────────────────────────────────────────────
 
 function HomeView({
-  onGuide,
   onQuiz,
   loading,
-  attemptsLeft,
 }: {
-  onGuide: () => void;
   onQuiz: () => void;
   loading: boolean;
-  attemptsLeft: number;
 }) {
+  const router = useRouter();
+
   return (
     <Screen scrollable padded>
       <View style={styles.homeHeader}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+        </TouchableOpacity>
         <View style={styles.headerIcon}>
           <Ionicons name="school" size={16} color={Colors.textInverse} />
         </View>
-        <Text style={styles.homeTitle}>KHU 꿀팁 퀴즈</Text>
+        <Text style={styles.homeTitle}>KHU 퀴즈</Text>
       </View>
 
       <View style={styles.heroBanner}>
         <View style={styles.heroAccent} />
-        <Text style={styles.heroEmoji}>🏫</Text>
-        <Text style={styles.heroTitle}>경희대 신입생{'\n'}필수 가이드</Text>
+        <Text style={styles.heroEmoji}>🧩</Text>
+        <Text style={styles.heroTitle}>경희대 꿀팁{'\n'}퀴즈 도전!</Text>
         <Text style={styles.heroDesc}>
-          수강신청·교통·맛집 등{'\n'}꼭 알아야 할 꿀팁을 공부하고{'\n'}퀴즈로 테스트해 보세요!
+          가이드에서 공부한 내용으로{'\n'}퀴즈를 풀어보세요
         </Text>
       </View>
 
@@ -325,47 +287,26 @@ function HomeView({
         {KHU_GUIDE.map((cat) => (
           <View key={cat.id} style={[styles.catChip, { backgroundColor: cat.color + '18' }]}>
             <Text style={styles.catChipEmoji}>{cat.emoji}</Text>
-            <Text style={[styles.catChipText, { color: cat.color }]}>{cat.title}</Text>
+            <Text style={[styles.catChipText, { color: cat.color }]}>{cat.titleKO}</Text>
           </View>
         ))}
       </View>
 
       <View style={styles.actionArea}>
-        <TouchableOpacity
-          style={styles.guideBtn}
-          onPress={() => Linking.openURL('https://www.notion.so/KHU-GUIDE-33e9ce2546d28061af04cae28b742b21')}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="book-outline" size={22} color={Colors.primary} />
-          <View style={styles.guideBtnText}>
-            <Text style={styles.guideBtnTitle}>가이드 읽기</Text>
-            <Text style={styles.guideBtnSub}>노션에서 꿀팁 보기</Text>
-          </View>
-          <Ionicons name="open-outline" size={18} color={Colors.textTertiary} />
-        </TouchableOpacity>
-
-        {attemptsLeft > 0 ? (
-          <Button
-            label={loading ? '문제 불러오는 중...' : `퀴즈 시작하기 →  (${attemptsLeft}회 남음)`}
-            onPress={onQuiz}
-            disabled={loading}
-            fullWidth
-            size="lg"
-            style={styles.quizStartBtn}
-          />
-        ) : (
-          <View style={styles.lockedBox}>
-            <Ionicons name="lock-closed" size={22} color={Colors.textTertiary} />
-            <Text style={styles.lockedText}>도전 기회를 모두 사용했습니다</Text>
-            <Text style={styles.lockedSub}>최고 점수가 경희 온도에 반영됩니다</Text>
-          </View>
-        )}
+        <Button
+          label={loading ? '문제 불러오는 중...' : '퀴즈 시작하기 →'}
+          onPress={onQuiz}
+          disabled={loading}
+          fullWidth
+          size="lg"
+          style={styles.quizStartBtn}
+        />
       </View>
 
       <Card style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Ionicons name="help-circle-outline" size={18} color={Colors.accent} />
-          <Text style={styles.infoText}>총 14문제 · 객관식 4지선다 · 최대 3회 도전</Text>
+          <Text style={styles.infoText}>총 14문제 · 객관식 4지선다</Text>
         </View>
         <View style={styles.infoRow}>
           <Ionicons name="trophy-outline" size={18} color={Colors.accent} />
@@ -379,39 +320,26 @@ function HomeView({
 // ─── Main ─────────────────────────────────────────────────────────
 
 export default function QuizScreen() {
+  const { category } = useLocalSearchParams<{ category?: string }>();
+  const categoryId = (category ?? '') as BadgeId;
   const [view, setView] = useState<View>('home');
-  const [questions, setQuestions] = useState<QuizQuestion[]>([]);
+  const [fetchedQuestions, setFetchedQuestions] = useState<QuizQuestion[]>([]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<QuizSubmitResponse | null>(null);
-  const [attemptsUsed, setAttemptsUsed] = useState(0);
 
-  // 앱 진입 시 남은 도전 횟수 로드
-  useEffect(() => {
-    (async () => {
-      try {
-        // 백엔드 결과 수로 우선 확인
-        const results = await quizApi.getMyResults();
-        setAttemptsUsed(results.length);
-        await AsyncStorage.setItem(ATTEMPT_KEY, String(results.length));
-      } catch {
-        // 백엔드 미연결 시 로컬 저장 값 사용
-        const stored = await AsyncStorage.getItem(ATTEMPT_KEY);
-        setAttemptsUsed(stored ? parseInt(stored, 10) : 0);
-      }
-    })();
-  }, []);
-
-  const attemptsLeft = Math.max(0, MAX_ATTEMPTS - attemptsUsed);
+  const questions = category
+    ? getQuestionsByCategory(category)
+    : fetchedQuestions;
 
   const loadQuestions = async () => {
-    if (questions.length > 0) return questions;
+    if (fetchedQuestions.length > 0) return fetchedQuestions;
     setLoading(true);
     try {
       const qs = await quizApi.getQuestions();
-      setQuestions(qs);
+      setFetchedQuestions(qs);
       return qs;
     } catch {
-      setQuestions(LOCAL_QUIZ_QUESTIONS);
+      setFetchedQuestions(LOCAL_QUIZ_QUESTIONS);
       return LOCAL_QUIZ_QUESTIONS;
     } finally {
       setLoading(false);
@@ -419,31 +347,31 @@ export default function QuizScreen() {
   };
 
   const handleStartQuiz = async () => {
-    if (attemptsLeft <= 0) return;
-    const qs = await loadQuestions();
-    if (qs.length > 0) setView('quiz');
+    if (category) {
+      setView('quiz');
+    } else {
+      const qs = await loadQuestions();
+      if (qs.length > 0) setView('quiz');
+    }
   };
 
   const handleFinish = async (response: QuizSubmitResponse) => {
-    const newCount = attemptsUsed + 1;
-    setAttemptsUsed(newCount);
-    await AsyncStorage.setItem(ATTEMPT_KEY, String(newCount));
     setResult(response);
     setView('result');
+    if (category && response.score >= 70) {
+      badgeApi.earnBadge(categoryId).catch(() => {});
+    }
   };
 
-  if (view === 'guide') return <GuideView onBack={() => setView('home')} />;
   if (view === 'quiz' && questions.length > 0)
     return <QuizView questions={questions} onFinish={handleFinish} />;
   if (view === 'result' && result)
-    return <ResultView response={result} questions={questions} onRetry={() => { setResult(null); setView('home'); }} onHome={() => setView('home')} />;
+    return <ResultView response={result} questions={questions} category={category} categoryId={category ? categoryId : undefined} onRetry={() => { setResult(null); setView('home'); }} onHome={() => setView('home')} />;
 
   return (
     <HomeView
-      onGuide={() => setView('guide')}
       onQuiz={handleStartQuiz}
       loading={loading}
-      attemptsLeft={attemptsLeft}
     />
   );
 }
@@ -585,26 +513,6 @@ const styles = StyleSheet.create({
   optionIndexText: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.textSecondary },
   optionText: { flex: 1, fontSize: Typography.base, color: Colors.textPrimary },
   nextBtn: { marginTop: 'auto' },
-  lockedBox: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: Spacing[2],
-    padding: Spacing[5],
-    borderRadius: Radius.md,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surfaceSecondary,
-  },
-  lockedText: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.textSecondary,
-  },
-  lockedSub: {
-    fontSize: Typography.sm,
-    color: Colors.textTertiary,
-    textAlign: 'center',
-  },
 
   // Result
   resultBanner: {
@@ -659,6 +567,12 @@ const styles = StyleSheet.create({
     gap: Spacing[2],
     paddingTop: Spacing[5],
     paddingBottom: Spacing[4],
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerIcon: {
     width: 28,
@@ -715,21 +629,25 @@ const styles = StyleSheet.create({
   catChipEmoji: { fontSize: 13 },
   catChipText: { fontSize: Typography.xs, fontWeight: Typography.semibold },
   actionArea: { gap: Spacing[3], marginBottom: Spacing[4] },
-  guideBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[3],
-    backgroundColor: Colors.surface,
-    borderRadius: Radius.lg,
-    padding: Spacing[4],
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-  },
-  guideBtnText: { flex: 1 },
-  guideBtnTitle: { fontSize: Typography.base, fontWeight: Typography.semibold, color: Colors.textPrimary },
-  guideBtnSub: { fontSize: Typography.xs, color: Colors.textTertiary, marginTop: 2 },
   quizStartBtn: { marginTop: Spacing[1] },
   infoCard: { gap: Spacing[3] },
   infoRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing[2] },
   infoText: { fontSize: Typography.sm, color: Colors.textSecondary },
+
+  // Badge earned
+  badgeEarned: {
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    borderRadius: Radius.lg,
+    padding: Spacing[4],
+    marginVertical: Spacing[3],
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  badgeEarnedEmoji: { fontSize: 40, marginBottom: Spacing[2] },
+  badgeEarnedText: {
+    fontSize: Typography.lg,
+    fontWeight: Typography.bold,
+    color: Colors.primary,
+  },
 });
