@@ -47,15 +47,6 @@ function MessageBubble({
   const tr = useAutoTranslate([item.content], target, !isMine);
   return (
     <View style={[styles.msgRow, isMine && styles.msgRowRight]}>
-      {isMine && (
-        <TouchableOpacity
-          onPress={() => onDelete(item.messageId)}
-          style={styles.deleteBtn}
-          hitSlop={8}
-        >
-          <Ionicons name="trash-outline" size={15} color={Colors.textTertiary} />
-        </TouchableOpacity>
-      )}
       <Pressable
         onLongPress={isMine ? () => onDelete(item.messageId) : undefined}
         delayLongPress={350}
@@ -239,11 +230,9 @@ const styles = StyleSheet.create({
   },
   msgRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing[1],
+    alignItems: 'flex-end',
   },
   msgRowRight: { justifyContent: 'flex-end' },
-  deleteBtn: { padding: Spacing[1] },
   bubble: {
     maxWidth: '72%',
     paddingHorizontal: Spacing[4],
