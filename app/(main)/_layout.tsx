@@ -79,19 +79,13 @@ export default function MainLayout() {
           ),
         }}
       />
-      {/* 탭바에서 숨길 스크린들 (QnA는 메인 탭으로 통합, 퀴즈는 가이드 안에서 진입) */}
+      {/* 탭바에서 숨길 스크린들 (각 폴더는 자체 _layout으로 하위 라우트를 처리하므로 폴더명만 숨김) */}
       <Tabs.Screen name="quiz" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity-create" options={{ href: null }} />
       <Tabs.Screen name="mentor-profile" options={{ href: null }} />
       <Tabs.Screen name="board" options={{ href: null }} />
-      <Tabs.Screen name="board/[postId]" options={{ href: null }} />
-      <Tabs.Screen name="board/create" options={{ href: null }} />
       <Tabs.Screen name="qna" options={{ href: null }} />
-      <Tabs.Screen name="qna/[qnaId]" options={{ href: null }} />
-      <Tabs.Screen name="qna/create" options={{ href: null }} />
-      <Tabs.Screen name="chat/[partnerId]" options={{ href: null }} />
-      <Tabs.Screen name="lectures/[lectureId]" options={{ href: null }} />
     </Tabs>
   );
 }

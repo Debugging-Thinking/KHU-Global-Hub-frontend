@@ -13,11 +13,18 @@ const apiClient = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// 요청 인터셉터 — accessToken 자동 첨부
+// 요청 인터셉터 — accessToken 자동 첨부 + 멀티파트 Content-Type 보정
 apiClient.interceptors.request.use(async (config: InternalAxiosRequestConfig) => {
   const token = await AsyncStorage.getItem('accessToken');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  // FormData(파일 업로드)면 인스턴스 기본 application/json을 제거 → 브라우저가 multipart/form-data; boundary=… 를 직접 설정.
+  // (안 하면 boundary 없이 application/json으로 전송돼 서버가 파싱 못 함 → 415/500)
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    const h: any = config.headers;
+    if (h && typeof h.delete === 'function') h.delete('Content-Type');
+    else if (h) delete h['Content-Type'];
   }
   return config;
 });
