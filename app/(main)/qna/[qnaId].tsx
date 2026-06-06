@@ -164,7 +164,7 @@ export default function QnADetailScreen() {
     confirmAction(t.deleteQna, t.confirmDeleteQna, t.cancel, t.delete, async () => {
       try {
         await qnaApi.deleteQna(id);
-        router.back();
+        router.navigate('/(main)');
       } catch {}
     });
   };
@@ -216,7 +216,7 @@ export default function QnADetailScreen() {
   return (
     <Screen padded={false}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.navigate('/(main)')}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Q&A</Text>

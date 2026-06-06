@@ -76,6 +76,7 @@ export default function ProfileScreen() {
   const [admissionYear, setAdmissionYear] = useState(CURRENT_YEAR);
   const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
+  const [bio, setBio] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
@@ -103,6 +104,7 @@ export default function ProfileScreen() {
     setAdmissionYear(profile.admissionYear);
     setPreferredLanguage(profile.preferredLanguage ?? 'ko');
     setMentoringRole(profile.mentoringRole === 'NONE' ? 'MENTEE' : profile.mentoringRole);
+    setBio(profile.bio ?? '');
     setError('');
     setIsEditing(true);
   };
@@ -128,6 +130,7 @@ export default function ProfileScreen() {
         admissionYear,
         language: bucketFromAzure(preferredLanguage),
         preferredLanguage,
+        bio: bio.trim(),
         // 신입생은 mentoringRole 전송하지 않음 (백엔드에서도 MENTEE 고정)
         ...(isNewStudent ? {} : { mentoringRole }),
       });
@@ -259,6 +262,8 @@ export default function ProfileScreen() {
           <InfoRow icon="language-outline" label={t.languageLabel} value={languageDisplay(profile.preferredLanguage) ?? profile.language} />
           <View style={styles.divider} />
           <InfoRow icon="people-outline" label={t.mentoringLabel} value={ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole} />
+          <View style={styles.divider} />
+          <InfoRow icon="person-circle-outline" label={t.bioLabel} value={profile.bio?.trim() ? profile.bio : t.noBio} />
         </Card>
       ) : (
         <Card style={styles.editCard}>
@@ -336,6 +341,9 @@ export default function ProfileScreen() {
               </View>
             )}
           </View>
+
+          {/* 자기소개 */}
+          <Input label={t.bioLabel} placeholder={t.bioLabel} value={bio} onChangeText={setBio} multiline maxLength={500} />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
           <Button label={t.save} onPress={handleSave} loading={saving} fullWidth size="lg" />

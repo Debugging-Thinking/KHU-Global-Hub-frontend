@@ -1,5 +1,5 @@
-import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   Image,
   ScrollView,
@@ -24,21 +24,39 @@ export default function CreatePostScreen() {
   const router = useRouter();
   const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
+  const { postId } = useLocalSearchParams<{ postId?: string }>();
+  const editing = !!postId;
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [images, setImages] = useState<PickedImage[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
+  const [editLang, setEditLang] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // 새 글 작성 모드에서만 포커스 시 초기화 (수정 모드는 prefill 유지)
   useFocusEffect(useCallback(() => {
+    if (editing) return;
     setTitle('');
     setContent('');
     setImages([]);
     setIsAnonymous(false);
     setError('');
-  }, []));
+  }, [editing]));
+
+  // 수정 모드: 기존 글 원문을 불러와 채움
+  useEffect(() => {
+    if (!postId) return;
+    boardApi.getPost(Number(postId), language as any)
+      .then((p) => {
+        setTitle(p.originalTitle || p.title);
+        setContent(p.originalContent || p.content);
+        setIsAnonymous(p.isAnonymous);
+        setEditLang(p.originalLanguage);
+      })
+      .catch(() => {});
+  }, [postId]);
 
   const addImages = async () => {
     const picked = await pickFiles(true);
@@ -56,8 +74,13 @@ export default function CreatePostScreen() {
     setError('');
     setLoading(true);
     try {
-      await boardApi.createPost({ title, content, isAnonymous, language: language as any }, images);
-      router.back();
+      if (editing) {
+        await boardApi.updatePost(Number(postId), { title, content, isAnonymous, language: (editLang ?? language) as any }, images);
+        router.replace(`/(main)/board/${postId}`);
+      } else {
+        await boardApi.createPost({ title, content, isAnonymous, language: language as any }, images);
+        router.back();
+      }
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t.createPostFailed);
     } finally {

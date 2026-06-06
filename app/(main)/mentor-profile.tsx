@@ -162,6 +162,16 @@ export default function MentorProfileScreen() {
             </View>
 
           </View>
+
+          {/* 1:1 채팅하기 — 대화 시작 전엔 방이 생기지 않고, 메시지를 보내면 기록에 남음 */}
+          <TouchableOpacity
+            style={styles.chatBtn}
+            onPress={() => router.push(`/(main)/chat/${profile.memberId}`)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.textInverse} />
+            <Text style={styles.chatBtnText}>{t.mentoringGoToChat}</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
     </Screen>
@@ -184,6 +194,21 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  chatBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing[2],
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.lg,
+    paddingVertical: Spacing[4],
+    marginTop: Spacing[5],
+  },
+  chatBtnText: {
+    fontSize: Typography.base,
+    fontWeight: Typography.semibold,
+    color: Colors.textInverse,
   },
   headerTitle: {
     fontSize: Typography.lg,

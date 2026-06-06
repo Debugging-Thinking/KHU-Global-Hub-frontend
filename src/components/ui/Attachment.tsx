@@ -1,5 +1,8 @@
-import React from 'react';
-import { Image, Linking, StyleSheet, Text, TouchableOpacity, type ImageStyle, type StyleProp } from 'react-native';
+import React, { useState } from 'react';
+import {
+  Image, Linking, Modal, Pressable, StyleSheet, Text, TouchableOpacity,
+  View, type ImageStyle, type StyleProp,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
@@ -20,12 +23,29 @@ export function isImageUrl(url: string): boolean {
 }
 
 /**
- * 첨부 표시. 이미지면 미리보기, 그 외 파일은 클립 아이콘 + 파일명 칩(탭하면 열림).
+ * 첨부 표시. 이미지면 미리보기(탭하면 전체화면 확대), 그 외 파일은 클립 아이콘 + 파일명 칩(탭하면 열림).
  */
 export function Attachment({ url, imageStyle }: { url: string; imageStyle?: StyleProp<ImageStyle> }) {
+  const [zoom, setZoom] = useState(false);
+
   if (isImageUrl(url)) {
-    return <Image source={{ uri: url }} style={[styles.image, imageStyle]} />;
+    return (
+      <>
+        <Pressable onPress={() => setZoom(true)}>
+          <Image source={{ uri: url }} style={[styles.image, imageStyle]} />
+        </Pressable>
+        <Modal visible={zoom} transparent animationType="fade" onRequestClose={() => setZoom(false)}>
+          <Pressable style={styles.backdrop} onPress={() => setZoom(false)}>
+            <Image source={{ uri: url }} style={styles.full} resizeMode="contain" />
+            <TouchableOpacity style={styles.closeBtn} onPress={() => setZoom(false)} hitSlop={12}>
+              <Ionicons name="close" size={28} color="#fff" />
+            </TouchableOpacity>
+          </Pressable>
+        </Modal>
+      </>
+    );
   }
+
   const name = fileNameFromUrl(url);
   return (
     <TouchableOpacity style={styles.chip} onPress={() => Linking.openURL(url)} activeOpacity={0.7}>
@@ -43,6 +63,14 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceSecondary,
     marginTop: Spacing[2],
   },
+  backdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.92)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  full: { width: '92%', height: '82%' },
+  closeBtn: { position: 'absolute', top: 40, right: 20, padding: 6 },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',

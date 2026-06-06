@@ -46,6 +46,28 @@ export const boardApi = {
     return apiClient.post('/posts', form, config).then(unwrap<number>);
   },
 
+  /** 게시글 수정 (작성자 본인). 제목/내용 + 새로 추가한 이미지(있으면). */
+  updatePost: async (postId: number, body: CreatePostRequest, images: PickedImage[] = []) => {
+    const form = new FormData();
+    form.append('title', body.title);
+    form.append('content', body.content);
+    form.append('language', body.language);
+    for (const asset of images) {
+      if (Platform.OS === 'web') {
+        if (asset.file) form.append('images', asset.file);
+        else {
+          const res = await fetch(asset.uri);
+          const blob = await res.blob();
+          form.append('images', blob, asset.fileName ?? 'post.jpg');
+        }
+      } else {
+        form.append('images', { uri: asset.uri, type: asset.mimeType ?? 'image/jpeg', name: asset.fileName ?? 'post.jpg' } as any);
+      }
+    }
+    const config = Platform.OS === 'web' ? undefined : { headers: { 'Content-Type': 'multipart/form-data' } };
+    return apiClient.put(`/posts/${postId}`, form, config).then(unwrap<null>);
+  },
+
   deletePost: (postId: number) =>
     apiClient.delete(`/posts/${postId}`).then(unwrap<null>),
 

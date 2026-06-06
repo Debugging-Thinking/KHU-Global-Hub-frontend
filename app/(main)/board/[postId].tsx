@@ -205,7 +205,7 @@ export default function PostDetailScreen() {
   };
 
   const handleComment = async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim() && !commentImage) return;  // 텍스트 또는 첨부 중 하나만 있어도 작성
     setSubmitting(true);
     try {
       await boardApi.createComment(Number(postId), {
@@ -233,7 +233,7 @@ export default function PostDetailScreen() {
     confirmAction(t.deletePost, t.confirmDeletePost, t.cancel, t.delete, async () => {
       try {
         await boardApi.deletePost(Number(postId));
-        router.back();
+        router.navigate('/(main)');
       } catch {}
     });
   };
@@ -266,16 +266,21 @@ export default function PostDetailScreen() {
     <Screen padded={false}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.navigate('/(main)')}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>
           {post.title}
         </Text>
         {post.isOwner ? (
-          <TouchableOpacity onPress={handleDeletePost}>
-            <Ionicons name="trash-outline" size={22} color={Colors.error} />
-          </TouchableOpacity>
+          <View style={{ flexDirection: 'row', gap: Spacing[3] }}>
+            <TouchableOpacity onPress={() => router.push(`/(main)/board/create?postId=${postId}`)}>
+              <Ionicons name="pencil-outline" size={21} color={Colors.primary} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleDeletePost}>
+              <Ionicons name="trash-outline" size={21} color={Colors.error} />
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={{ width: 24 }} />
         )}

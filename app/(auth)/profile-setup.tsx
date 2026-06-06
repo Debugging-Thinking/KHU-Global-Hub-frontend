@@ -33,6 +33,7 @@ export default function ProfileSetupScreen() {
   const [admissionYear, setAdmissionYear] = useState<number>(CURRENT_YEAR);
   const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
+  const [bio, setBio] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -61,6 +62,7 @@ export default function ProfileSetupScreen() {
         language: uiLang,
         preferredLanguage,
         mentoringRole: role,
+        bio: bio.trim() || undefined,
       });
       const profile = await memberApi.getMe();
       setProfile(profile);
@@ -165,6 +167,16 @@ export default function ProfileSetupScreen() {
             value={preferredLanguage}
             displayValue={languageDisplay(preferredLanguage)}
             onSelect={setPreferredLanguage}
+          />
+
+          {/* 자기소개 (선택) */}
+          <Input
+            label={t.bioLabel}
+            placeholder={t.bioLabel}
+            value={bio}
+            onChangeText={setBio}
+            multiline
+            maxLength={500}
           />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}

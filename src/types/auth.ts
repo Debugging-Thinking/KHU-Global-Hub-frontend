@@ -35,6 +35,8 @@ export interface ProfileSetupRequest {
   /** 실제 선호 언어 Azure 코드 (6개 외 포함, 예 'fr'). 백엔드가 language(버킷)를 파생. */
   preferredLanguage: string;
   mentoringRole: MentoringRole;
+  /** 자기소개 (선택, 최대 500자). */
+  bio?: string | null;
 }
 
 export interface AuthTokens {
@@ -59,6 +61,8 @@ export interface Profile {
   preferredLanguage: string;
   mentoringRole: MentoringRole;
   profileImageUrl: string | null;
+  /** 자기소개 (선택, 최대 500자). */
+  bio?: string | null;
 }
 
 export interface AuthState {
