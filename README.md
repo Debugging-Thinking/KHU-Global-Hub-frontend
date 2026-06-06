@@ -41,7 +41,7 @@
 | 프레임워크 | Spring Boot 3.4.5 |
 | ORM | Spring Data JPA (Hibernate) |
 | 인증 | Spring Security + JWT (jjwt 0.12.6) |
-| DB | PostgreSQL 16 (로컬: Docker) |
+| DB | PostgreSQL 17 (로컬: Docker, 포트 5433) + Flyway 마이그레이션 |
 | 파일 저장 | AWS S3 SDK v2 (2.29.52) |
 | 번역 | Microsoft Azure Translator API |
 | API 문서 | springdoc-openapi 2.8.5 (Swagger) |
@@ -62,13 +62,14 @@
 
 ## 3. 핵심 기능
 
-- **다국어 게시판** — 게시글·댓글 작성 시 6개 언어(한·영·중·베트남·스페인·몽골)로 자동 번역 (Azure Translator)
+- **다국어 게시판/Q&A** — 작성 시 6개 언어(한·영·중·베트남·**우즈벡**·몽골)로 사전 번역. 6개 외 언어 사용자는 원문 + **on-demand 번역**(`POST /api/translate`, "번역하기" 토글). (선호언어는 Azure 182개 코드로 저장, 6개 버킷 파생)
+- **강의평 (coursereview)** — 경희대 국제캠 **실제 강의 2141건**(2026-1) + 익명 별점·리뷰 + 수업지표(출석방식·발표·조모임·과제·한국어사용 빈도, 강의 단위 집계). 강의평 본문도 게시판식 다국어 번역.
 - **익명 번호 시스템** — 게시글/Q&A별 독립 익명 컨텍스트, 작성자=익명1 → 이후 댓글 익명2, 3, ...
 - **Q&A 채택 시스템** — 질문에 답변을 달고 질문자가 채택, 채택 후 추가 답변 불가
-- **멘토-멘티 자동 매칭** — 매년 3월/9월 1일 스케줄러로 자동 매칭, 시스템 메시지 발송
-- **1:1 DM 채팅** — 멘토-멘티 및 자유 메시지, 읽음 처리 포함
-- **이미지 업로드** — 게시글·프로필 사진 AWS S3 비동기 업로드
-- **이메일 인증** — @khu.ac.kr 이메일 인증 기반 가입
+- **멘토-멘티 자동 매칭** — 매년 3월/9월 1일 스케줄러로 점수제 매칭 + 활동기록, 시스템 메시지 발송
+- **1:1 DM 채팅** — 자유/멘토링 메시지, 읽음 처리, **메시지 삭제(본인)**, 이미지·파일 첨부, 상대 프로필 표시
+- **파일 업로드** — 게시글·프로필·댓글·채팅에 이미지 + **일반 파일 첨부**, AWS S3 비동기
+- **게시글 수정** — 작성자 본인 수정(재번역 포함) · **이메일 인증**(@khu.ac.kr) · 비밀번호 재설정
 
 ---
 
@@ -132,10 +133,12 @@ npx expo start
 
 ```bash
 cd frontend
-npx expo export --platform web   # dist/ 생성
+# 🚨 운영 IP 주입(포트 없이) + Metro 캐시 클리어 필수! 미주입 시 배포본이 localhost를 가리켜 로그인 전체 실패
+EXPO_PUBLIC_API_URL=http://{EC2_IP} npx expo export --platform web --clear   # dist/ 생성
+# 검증: grep -rl '{EC2_IP}' dist/_expo (≥1) & grep -rl 'localhost:8080' dist/_expo (=0)
 
 scp -i "{KEY}.pem" -r dist/* ubuntu@{EC2_IP}:~/web/
-ssh -i "{KEY}.pem" ubuntu@{EC2_IP} "sudo cp -r ~/web/* /var/www/html/globalhub/"
+ssh -i "{KEY}.pem" ubuntu@{EC2_IP} "sudo rm -rf /var/www/html/globalhub/* && sudo cp -r ~/web/* /var/www/html/globalhub/"
 ```
 
 > Azure Translator, AWS S3, Gmail SMTP 기능은 해당 환경변수 없이는 동작하지 않습니다.
@@ -171,25 +174,21 @@ design_thinking/
     └── constants/
         └── theme.ts                    # Colors, Typography, Spacing, Radius, Shadow
 
-backend/src/main/java/com/khu/globalhub/
+backend/src/main/java/com/khu/globalhub/   # Bounded Context 단위 격리 (ArchUnit 강제)
 ├── KhuGlobalHubApplication.java
-├── global/
-│   ├── common/       ApiResponse, BaseTimeEntity
-│   ├── config/       AsyncConfig, SecurityConfig, S3Config, JpaConfig
-│   ├── enums/        Language, BoardType, CommentTargetType, AliasContextType, ...
-│   ├── exception/    ErrorCode, CustomException, GlobalExceptionHandler
-│   ├── infra/        TranslationService, S3Service
-│   ├── jwt/          JwtTokenProvider, JwtAuthenticationFilter
-│   └── util/         SecurityUtil
-└── domain/
-    ├── anonymous/    AnonymousAlias 엔티티 + 익명 번호 서비스
-    ├── auth/         회원가입, 이메일 인증, 로그인
-    ├── member/       프로필 관리, 멘토링 역할
-    ├── board/        게시판 (FRESHMAN/FREE/GRADUATE)
-    ├── comment/      댓글·대댓글 (POST/QNA/ANSWER 통합)
-    ├── qna/          Q&A + 답변 채택
-    ├── mentoring/    멘토-멘티 매칭 + 스케줄러
-    └── chat/         1:1 DM
+├── identity/      # 계정·인증·JWT·비번재설정 (Member)        [본인]
+├── profile/       # 프로필 (Profile, /api/members)           [본인]
+├── board/         # 게시판(자유 1종) + 댓글 + 좋아요/이미지    [본인]
+├── qna/           # 질문 + 답변(채택) + 좋아요               [본인]
+├── chat/          # 1:1 DM (삭제·첨부·상대프로필)            [현우]
+├── mentoring/     # 멘토-멘티 매칭 + 스케줄러 + 활동기록      [현우]
+├── campusguide/   # 퀴즈 (+ 학사 가이드 예정)               [태경]
+├── coursereview/  # 강의평 (강의 카탈로그 + 익명 리뷰 + 지표)  [본인]
+├── translation/   # on-demand 번역 (POST /api/translate)     [본인]
+├── media/         # 파일 업로드 (POST /api/images → S3)      [본인]
+└── shared/        # 전역 공통 (port·extevent·anonymous·config·jwt·infra·util)
+#   각 BC 내부 4계층: domain / application / infrastructure / presentation
+#   크로스-BC 통신은 ID 참조 · shared.port · shared.extevent 로만 (다른 BC import 금지)
 ```
 
 ---
@@ -206,6 +205,8 @@ backend/src/main/java/com/khu/globalhub/
 | POST | `/login` | 로그인 (accessToken + refreshToken + hasProfile) |
 | POST | `/refresh` | 리프레시 토큰으로 액세스 토큰 갱신 |
 | POST | `/logout` | 로그아웃 |
+| POST | `/forgot-password` | 비밀번호 재설정 코드 발송 (10분) |
+| POST | `/reset-password` | 코드 검증 후 새 비번 적용 (전 기기 로그아웃) |
 
 ### Member — `/api/members`
 
@@ -226,8 +227,11 @@ backend/src/main/java/com/khu/globalhub/
 | GET | `/?language=KO` | 게시글 목록 (페이징, 게시판 1종) |
 | GET | `/popular?language=KO` | 인기 게시물 (좋아요 10개 이상) |
 | GET | `/{postId}?language=KO` | 게시글 상세 (isLiked, isOwner 포함) |
+| PUT | `/{postId}` | 게시글 수정 (multipart, 작성자만 — 재번역 + 이미지 추가) |
 | DELETE | `/{postId}` | 게시글 삭제 (작성자만) |
 | POST | `/{postId}/like` | 좋아요 토글 |
+
+> 읽기 엔드포인트는 `&original=true` 지원 — 번역본 대신 원문 행 반환(6개 외 언어 사용자용).
 
 ### Comment
 
@@ -259,14 +263,27 @@ backend/src/main/java/com/khu/globalhub/
 | Method | Path | 설명 |
 |--------|------|------|
 | GET | `/me` | 내 현재 ACTIVE 매칭 정보 (상대방 프로필 포함) |
+| GET | `/me/history` | 내 전체 매칭 이력 |
+| GET·POST | `/{matchId}/activities` | 멘토링 활동 기록 조회/작성 (매칭 당사자만) |
 
 ### Chat — `/api/chat`
 
 | Method | Path | 설명 |
 |--------|------|------|
-| POST | `/` | 메시지 전송 |
+| POST | `/` | 메시지 전송 (텍스트/이미지/파일) |
 | GET | `/` | DM 목록 (대화 상대 + 마지막 메시지 + 안읽은 수) |
 | GET | `/{partnerId}` | 특정 상대와 대화 내용 조회 + 읽음 처리 |
+| DELETE | `/{messageId}` | 메시지 삭제 (본인이 보낸 것만) |
+
+### Translation / Media / Course Review
+
+| Method | Path | 설명 |
+|--------|------|------|
+| POST | `/api/translate` | on-demand 번역 `{texts[], target, source?}` |
+| POST | `/api/images` | 파일 업로드(multipart, 이미지 외 파일도) → S3 `{url}` |
+| GET | `/api/lectures?semester=2026-1&query=&language=KO` | 강의 검색 (이름/교수/코드) |
+| GET | `/api/lectures/{id}` | 강의 상세 + 지표 + 강의평(익명) |
+| POST | `/api/lectures/{id}/reviews` · DELETE `/api/lectures/reviews/{id}` | 강의평 작성/삭제 |
 
 ---
 
@@ -289,7 +306,7 @@ Authorization: Bearer {accessToken}
 ```
 실패 시: `success: false`, `data: null`, `message`에 에러 내용.
 
-**언어 파라미터**: `?language=KO` (KO/EN/ZH/VI/ES/MN), 생략 시 기본 KO.
+**언어 파라미터**: `?language=KO` (KO/EN/ZH/VI/UZ/MN — 한/영/중/베트남/우즈벡/몽골), 생략 시 기본 KO. 6개 외 언어 사용자는 `&original=true` + `POST /api/translate`.
 
 **페이지네이션**: `?page=0&size=20` (Spring Pageable 기본값).
 
@@ -376,8 +393,8 @@ lastMessage, unreadCount, lastMessageAt
 | Q&A 채택 마일리지 | 채택 기능 구현 완료, 마일리지는 추후 |
 | 게시글 신고/블라인드 | Phase 2 |
 | 푸시 알림 | Phase 2 |
-| 게시글·댓글 수정 API | 삭제 구현 완료, 수정은 미구현 |
-| Q&A·답변 댓글 UI | 백엔드 API 있음, 프론트 미구현 |
+| 댓글 수정 API | 게시글 수정은 구현 완료(PUT), 댓글 수정은 미구현 |
+| 채팅 서버측 번역 캐시 | 현재 클라(세션) 캐시만 — Azure Free F0 한도 주의 |
 | APK 재빌드 | 최신 프론트 코드 반영 필요 |
 
 ---
