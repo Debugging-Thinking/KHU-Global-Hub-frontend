@@ -10,4 +10,8 @@ export const chatApi = {
 
   sendMessage: (body: SendMessageRequest) =>
     apiClient.post('/chat', body).then(unwrap<ChatMessage>),
+
+  /** 내가 보낸 메시지 삭제. */
+  deleteMessage: (messageId: number) =>
+    apiClient.delete(`/chat/${messageId}`).then(unwrap<null>),
 };

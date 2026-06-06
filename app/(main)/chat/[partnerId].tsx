@@ -2,10 +2,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
-  Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   StyleSheet,
   Text,
   TextInput,
@@ -16,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { chatApi } from '@/src/api/chat';
+import { Attachment } from '@/src/components/ui/Attachment';
 import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
@@ -34,23 +36,29 @@ function MessageBubble({
   isMine,
   target,
   t,
+  onDelete,
 }: {
   item: ChatMessage;
   isMine: boolean;
   target: string;
   t: ReturnType<typeof useT>;
+  onDelete: (messageId: number) => void;
 }) {
   const tr = useAutoTranslate([item.content], target, !isMine);
   return (
     <View style={[styles.msgRow, isMine && styles.msgRowRight]}>
-      <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
+      <Pressable
+        onLongPress={isMine ? () => onDelete(item.messageId) : undefined}
+        delayLongPress={350}
+        style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}
+      >
         {(isMine ? item.content : tr.displays[0]) ? (
           <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
             {isMine ? item.content : tr.displays[0]}
           </Text>
         ) : null}
         {item.imageUrl ? (
-          <Image source={{ uri: item.imageUrl }} style={styles.msgImage} resizeMode="cover" />
+          <Attachment url={item.imageUrl} imageStyle={styles.msgImage} />
         ) : null}
         {!isMine && (tr.ready || tr.loading) && (
           <TouchableOpacity onPress={tr.toggle} style={styles.translateLink}>
@@ -59,7 +67,7 @@ function MessageBubble({
             </Text>
           </TouchableOpacity>
         )}
-      </View>
+      </Pressable>
     </View>
   );
 }
@@ -115,6 +123,20 @@ export default function ChatRoomScreen() {
     }
   };
 
+  const handleDelete = (messageId: number) => {
+    const onConfirm = async () => {
+      try { await chatApi.deleteMessage(messageId); await fetchMessages(); } catch {}
+    };
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${t.delete}?`)) onConfirm();
+    } else {
+      Alert.alert(t.delete, '', [
+        { text: t.cancel, style: 'cancel' },
+        { text: t.delete, style: 'destructive', onPress: onConfirm },
+      ]);
+    }
+  };
+
   function renderMessage({ item }: { item: ChatMessage }) {
     if (item.isSystem) {
       // 시스템 메시지(멘토링 매칭 안내)는 정적 텍스트로 취급 — 보는 사람 언어로 표시.
@@ -125,14 +147,14 @@ export default function ChatRoomScreen() {
       );
     }
     const isMine = item.senderId === myId;
-    return <MessageBubble item={item} isMine={isMine} target={target} t={t} />;
+    return <MessageBubble item={item} isMine={isMine} target={target} t={t} onDelete={handleDelete} />;
   }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'left', 'right']}>
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
+        <TouchableOpacity onPress={() => router.navigate('/(main)/chat')}>
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{t.conversation}</Text>

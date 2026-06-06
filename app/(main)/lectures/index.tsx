@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -70,6 +70,12 @@ export default function LecturesScreen() {
       // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [load])
   );
+
+  // 입력 즉시 검색(디바운스) — 이름·교수명·코드 모두 백엔드에서 매칭. Enter 불필요.
+  useEffect(() => {
+    const id = setTimeout(() => load(query), 300);
+    return () => clearTimeout(id);
+  }, [query, load]);
 
   return (
     <Screen padded={false}>
