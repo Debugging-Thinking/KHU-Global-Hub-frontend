@@ -1,4 +1,4 @@
-export type Language = 'KO' | 'EN' | 'ZH' | 'VI' | 'ES' | 'MN';
+export type Language = 'KO' | 'EN' | 'ZH' | 'VI' | 'UZ' | 'MN';
 
 export interface PostSummary {
   postId: number;
@@ -12,6 +12,9 @@ export interface PostSummary {
 
 export interface PostDetail extends PostSummary {
   content: string;
+  originalTitle: string;
+  originalContent: string;
+  authorId: number | null;   // 익명이면 null
   imageUrls: string[];
   isLiked: boolean;
   isOwner: boolean;
@@ -21,7 +24,12 @@ export interface PostDetail extends PostSummary {
 export interface CommentResponse {
   commentId: number;
   content: string;
+  originalContent: string;
+  originalLanguage: Language;
+  imageUrl: string | null;
   authorName: string | null;
+  authorId: number | null;   // 익명이면 null
+
   likeCount: number;
   isLiked: boolean;
   isOwner: boolean;
@@ -41,6 +49,7 @@ export interface CreateCommentRequest {
   isAnonymous: boolean;
   language: Language;
   parentId?: number;
+  imageUrl?: string | null;
 }
 
 export interface PageResponse<T> {

@@ -27,32 +27,52 @@ function confirmAction(title: string, message: string, cancelLabel: string, dele
 import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '@/src/components/layout/Screen';
+import { AuthorName } from '@/src/components/ui/AuthorName';
+import { Attachment } from '@/src/components/ui/Attachment';
+import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { boardApi } from '@/src/api/board';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
+import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
+import { useItemTranslation } from '@/src/hooks/useTextTranslate';
+import type { Language } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { CommentResponse, PostDetail } from '@/src/types/board';
 
-function CommentItem({
+/** 항목별 원문↔번역 토글 링크. */
+function ItemToggle({ tr }: { tr: ReturnType<typeof useItemTranslation> }) {
+  const t = useT();
+  if (!tr.showToggle) return null;
+  return (
+    <TouchableOpacity onPress={tr.toggle} style={styles.commentTranslate}>
+      <Text style={styles.commentTranslateText}>
+        {tr.loading ? t.translating : tr.showOriginal ? t.viewTranslation : t.viewOriginal}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+function ReplyItem({
   comment,
-  cancelLabel,
-  deleteLabel,
-  onLike,
+  prestored,
+  viewerBucket,
+  preferredCode,
   onDelete,
+  onAuthorPress,
 }: {
   comment: CommentResponse;
-  cancelLabel: string;
-  deleteLabel: string;
-  onLike: (id: number) => void;
+  prestored: boolean;
+  viewerBucket: Language;
+  preferredCode: string;
   onDelete: (id: number) => void;
+  onAuthorPress: (id: number) => void;
 }) {
   const t = useT();
+  const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
-    <View style={styles.commentItem}>
+    <View style={styles.replyItem}>
       <View style={styles.commentHeader}>
-        <Text style={styles.commentAuthor}>
-          {comment.authorName ?? t.anonymous}
-        </Text>
+        <AuthorName name={comment.authorName ?? t.anonymous} authorId={comment.authorId} onPress={onAuthorPress} style={styles.commentAuthor} />
         <Text style={styles.commentTime}>{timeAgo(comment.createdAt, t)}</Text>
         {comment.isOwner && (
           <TouchableOpacity onPress={() => onDelete(comment.commentId)} style={styles.deleteBtn}>
@@ -60,28 +80,66 @@ function CommentItem({
           </TouchableOpacity>
         )}
       </View>
-      <Text style={styles.commentContent}>{comment.content}</Text>
-      <TouchableOpacity onPress={() => onLike(comment.commentId)} style={styles.commentLike}>
-        <Ionicons
-          name={comment.isLiked ? 'heart' : 'heart-outline'}
-          size={13}
-          color={comment.isLiked ? Colors.error : Colors.textTertiary}
-        />
-        <Text style={styles.commentLikeText}>{comment.likeCount}</Text>
-      </TouchableOpacity>
+      <Text style={styles.commentContent}>{tr.displays[0]}</Text>
+      {comment.imageUrl ? <Attachment url={comment.imageUrl} imageStyle={styles.commentImage} /> : null}
+      <ItemToggle tr={tr} />
+    </View>
+  );
+}
+
+function CommentItem({
+  comment,
+  prestored,
+  viewerBucket,
+  preferredCode,
+  onLike,
+  onDelete,
+  onAuthorPress,
+}: {
+  comment: CommentResponse;
+  prestored: boolean;
+  viewerBucket: Language;
+  preferredCode: string;
+  onLike: (id: number) => void;
+  onDelete: (id: number) => void;
+  onAuthorPress: (id: number) => void;
+}) {
+  const t = useT();
+  const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
+  return (
+    <View style={styles.commentItem}>
+      <View style={styles.commentHeader}>
+        <AuthorName name={comment.authorName ?? t.anonymous} authorId={comment.authorId} onPress={onAuthorPress} style={styles.commentAuthor} />
+        <Text style={styles.commentTime}>{timeAgo(comment.createdAt, t)}</Text>
+        {comment.isOwner && (
+          <TouchableOpacity onPress={() => onDelete(comment.commentId)} style={styles.deleteBtn}>
+            <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
+          </TouchableOpacity>
+        )}
+      </View>
+      <Text style={styles.commentContent}>{tr.displays[0]}</Text>
+      {comment.imageUrl ? <Attachment url={comment.imageUrl} imageStyle={styles.commentImage} /> : null}
+      <View style={styles.commentActions}>
+        <TouchableOpacity onPress={() => onLike(comment.commentId)} style={styles.commentLike}>
+          <Ionicons
+            name={comment.isLiked ? 'heart' : 'heart-outline'}
+            size={13}
+            color={comment.isLiked ? Colors.error : Colors.textTertiary}
+          />
+          <Text style={styles.commentLikeText}>{comment.likeCount}</Text>
+        </TouchableOpacity>
+        <ItemToggle tr={tr} />
+      </View>
       {comment.children.map((child) => (
-        <View key={child.commentId} style={styles.replyItem}>
-          <View style={styles.commentHeader}>
-            <Text style={styles.commentAuthor}>{child.authorName ?? t.anonymous}</Text>
-            <Text style={styles.commentTime}>{timeAgo(child.createdAt, t)}</Text>
-            {child.isOwner && (
-              <TouchableOpacity onPress={() => onDelete(child.commentId)} style={styles.deleteBtn}>
-                <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
-              </TouchableOpacity>
-            )}
-          </View>
-          <Text style={styles.commentContent}>{child.content}</Text>
-        </View>
+        <ReplyItem
+          key={child.commentId}
+          comment={child}
+          prestored={prestored}
+          viewerBucket={viewerBucket}
+          preferredCode={preferredCode}
+          onDelete={onDelete}
+          onAuthorPress={onAuthorPress}
+        />
       ))}
     </View>
   );
@@ -92,25 +150,28 @@ export default function PostDetailScreen() {
   const t = useT();
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
+  const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  // 사전번역(6개) 모드: 원문/번역 재조회 토글. 그 외: 원문 + on-demand "번역하기".
+  const prestored = isPrestoredMode(preferredCode);
 
   const [post, setPost] = useState<PostDetail | null>(null);
   const [comments, setComments] = useState<CommentResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState('');
+  const [commentImage, setCommentImage] = useState<string | null>(null);
   const [commentAnonymous, setCommentAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [liked, setLiked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
-  // 번역 토글: false = 번역본(기본), true = 원문
-  const [showingOriginal, setShowingOriginal] = useState(false);
-
-  const fetchPost = async (lang: string) => {
-    const id = Number(postId);
-    const p = await boardApi.getPost(id, lang as any);
-    setPost(p);
-    setLiked(p.isLiked);
-    setLikeCount(p.likeCount);
-  };
+  // 게시글 본문(제목+본문 한 단위) 항목별 원문↔번역 토글.
+  const postTr = useItemTranslation(
+    [post?.title ?? '', post?.content ?? ''],
+    [post?.originalTitle ?? '', post?.originalContent ?? ''],
+    post?.originalLanguage,
+    prestored,
+    userLanguage as Language,
+    preferredCode,
+  );
 
   const fetchComments = async () => {
     const id = Number(postId);
@@ -120,8 +181,10 @@ export default function PostDetailScreen() {
 
   useEffect(() => {
     const id = Number(postId);
-    setShowingOriginal(false);
-    Promise.all([boardApi.getPost(id, userLanguage as any), boardApi.getComments(id, userLanguage as any)])
+    Promise.all([
+      boardApi.getPost(id, userLanguage as any),
+      boardApi.getComments(id, userLanguage as any),
+    ])
       .then(([p, c]) => {
         setPost(p);
         setComments(c);
@@ -131,15 +194,7 @@ export default function PostDetailScreen() {
       .finally(() => setLoading(false));
   }, [postId, userLanguage]);
 
-  const handleToggleTranslation = async () => {
-    if (!post) return;
-    const nextShowingOriginal = !showingOriginal;
-    const fetchLang = nextShowingOriginal ? post.originalLanguage : userLanguage;
-    try {
-      await fetchPost(fetchLang);
-      setShowingOriginal(nextShowingOriginal);
-    } catch {}
-  };
+  const goProfile = (id: number) => router.push(`/(main)/mentor-profile?memberId=${id}` as any);
 
   const handleLike = async () => {
     try {
@@ -157,9 +212,11 @@ export default function PostDetailScreen() {
         content: commentText,
         isAnonymous: commentAnonymous,
         language: userLanguage as any,
+        imageUrl: commentImage,
       });
       await fetchComments();
       setCommentText('');
+      setCommentImage(null);
     } catch {} finally {
       setSubmitting(false);
     }
@@ -202,8 +259,8 @@ export default function PostDetailScreen() {
 
   if (!post) return null;
 
-  // 원문 언어와 사용자 언어가 같으면 토글 불필요
-  const showToggle = post.originalLanguage !== userLanguage;
+  const bodyTitle = postTr.displays[0];
+  const bodyContent = postTr.displays[1];
 
   return (
     <Screen padded={false}>
@@ -227,35 +284,38 @@ export default function PostDetailScreen() {
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* 게시글 본문 */}
         <View style={styles.postContent}>
-          <Text style={styles.postTitle}>{post.title}</Text>
+          <Text style={styles.postTitle}>{bodyTitle}</Text>
           <View style={styles.postMeta}>
-            <Text style={styles.metaText}>
-              {post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
-            </Text>
+            <AuthorName
+              name={post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
+              authorId={post.isAnonymous ? null : post.authorId}
+              onPress={goProfile}
+              style={styles.metaText}
+            />
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.metaText}>{timeAgo(post.createdAt, t)}</Text>
           </View>
 
-          {/* 번역 토글 버튼 */}
-          {showToggle && (
-            <TouchableOpacity onPress={handleToggleTranslation} style={styles.translateBtn}>
+          {/* 게시글 본문 원문↔번역 토글 (항목별) */}
+          {postTr.showToggle && (
+            <TouchableOpacity onPress={postTr.toggle} style={styles.translateBtn} disabled={postTr.loading}>
               <Ionicons
-                name={showingOriginal ? 'language-outline' : 'document-text-outline'}
+                name={postTr.showOriginal ? 'document-text-outline' : 'language-outline'}
                 size={14}
                 color={Colors.primary}
               />
               <Text style={styles.translateBtnText}>
-                {showingOriginal ? t.viewTranslation : t.viewOriginal}
+                {postTr.loading ? t.translating : postTr.showOriginal ? t.viewTranslation : t.viewOriginal}
               </Text>
             </TouchableOpacity>
           )}
 
-          <Text style={styles.postBody}>{post.content}</Text>
+          <Text style={styles.postBody}>{bodyContent}</Text>
 
           {post.imageUrls.length > 0 && (
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.images}>
               {post.imageUrls.map((url, i) => (
-                <Image key={i} source={{ uri: url }} style={styles.image} />
+                <Attachment key={i} url={url} imageStyle={styles.image} />
               ))}
             </ScrollView>
           )}
@@ -283,10 +343,12 @@ export default function PostDetailScreen() {
             <CommentItem
               key={c.commentId}
               comment={c}
-              cancelLabel={t.cancel}
-              deleteLabel={t.delete}
+              prestored={prestored}
+              viewerBucket={userLanguage as Language}
+              preferredCode={preferredCode}
               onLike={handleCommentLike}
               onDelete={handleDeleteComment}
+              onAuthorPress={goProfile}
             />
           ))}
           <View style={{ height: Spacing[16] }} />
@@ -311,6 +373,7 @@ export default function PostDetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.commentInputRow}>
+          <ImagePickerButton imageUrl={commentImage} onChange={setCommentImage} />
           <TextInput
             style={styles.textInput}
             placeholder={t.commentPlaceholder}
@@ -432,9 +495,13 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: Typography.sm * Typography.relaxed,
   },
+  commentImage: { width: 160, height: 160, borderRadius: Radius.md, marginTop: Spacing[1] },
   deleteBtn: { marginLeft: 'auto' },
+  commentActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
   commentLike: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   commentLikeText: { fontSize: Typography.xs, color: Colors.textTertiary },
+  commentTranslate: { alignSelf: 'flex-start' },
+  commentTranslateText: { fontSize: Typography.xs, color: Colors.primary, fontWeight: Typography.medium },
   replyItem: {
     marginLeft: Spacing[4],
     paddingLeft: Spacing[3],

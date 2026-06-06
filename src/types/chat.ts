@@ -12,6 +12,7 @@ export interface ChatMessage {
   senderId: number | null;
   senderName: string | null;
   content: string;
+  imageUrl: string | null;
   isSystem: boolean;
   isRead: boolean;
   createdAt: string;
@@ -20,4 +21,5 @@ export interface ChatMessage {
 export interface SendMessageRequest {
   receiverId: number;
   content: string;
+  imageUrl?: string | null;
 }

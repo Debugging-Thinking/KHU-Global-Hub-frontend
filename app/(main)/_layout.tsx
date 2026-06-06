@@ -35,6 +35,15 @@ export default function MainLayout() {
         }}
       />
       <Tabs.Screen
+        name="lectures"
+        options={{
+          title: t.tabCourseReview,
+          tabBarIcon: ({ color, size }) => (
+            <TabIcon name="school-outline" color={color} size={size} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="chat"
         options={{
           title: t.tabChat,
@@ -55,7 +64,7 @@ export default function MainLayout() {
       <Tabs.Screen
         name="guide"
         options={{
-          title: '가이드',
+          title: t.tabGuide,
           tabBarIcon: ({ color, size }) => (
             <TabIcon name="book-outline" color={color} size={size} />
           ),
@@ -82,6 +91,7 @@ export default function MainLayout() {
       <Tabs.Screen name="qna/[qnaId]" options={{ href: null }} />
       <Tabs.Screen name="qna/create" options={{ href: null }} />
       <Tabs.Screen name="chat/[partnerId]" options={{ href: null }} />
+      <Tabs.Screen name="lectures/[lectureId]" options={{ href: null }} />
     </Tabs>
   );
 }

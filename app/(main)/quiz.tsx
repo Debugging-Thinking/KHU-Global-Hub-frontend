@@ -16,12 +16,15 @@ import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { quizApi } from '@/src/api/quiz';
 import { badgeApi } from '@/src/api/badge';
-import { KHU_GUIDE } from '@/src/data/khuGuide';
-import { LOCAL_QUIZ_QUESTIONS, getQuestionsByCategory, gradeLocally } from '@/src/data/quizQuestions';
+import { KHU_GUIDE, type L10n } from '@/src/data/khuGuide';
+import { getLocalQuestions, gradeLocally } from '@/src/data/quizHelpers';
 import { BADGE_META } from '@/src/types/badge';
 import type { BadgeId } from '@/src/types/badge';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import type { QuizAnswerItem, QuizQuestion, QuizSubmitResponse } from '@/src/types/quiz';
+import { useLanguage, useT, badgeName, type Language } from '@/src/i18n';
+
+const pickL10n = (m: L10n, lang: Language): string => m[lang] ?? m.EN ?? m.KO;
 
 type View = 'home' | 'quiz' | 'result';
 
@@ -34,6 +37,8 @@ function QuizView({
   questions: QuizQuestion[];
   onFinish: (response: QuizSubmitResponse) => void;
 }) {
+  const lang = useLanguage();
+  const t = useT();
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswerItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -66,7 +71,7 @@ function QuizView({
         const result = await quizApi.submit(newAnswers);
         onFinish(result);
       } catch {
-        onFinish(gradeLocally(newAnswers));
+        onFinish(gradeLocally(newAnswers, lang));
       } finally {
         setSubmitting(false);
       }
@@ -77,7 +82,7 @@ function QuizView({
     return (
       <View style={styles.centerFull}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>채점 중...</Text>
+        <Text style={styles.loadingText}>{t.quizScoring}</Text>
       </View>
     );
   }
@@ -144,7 +149,7 @@ function QuizView({
       </View>
 
       <Button
-        label={index + 1 < total ? '다음 문제' : '결과 보기'}
+        label={index + 1 < total ? t.quizNext : t.quizSeeResult}
         onPress={handleNext}
         disabled={selected === null}
         fullWidth
@@ -172,6 +177,7 @@ function ResultView({
   onRetry: () => void;
   onHome: () => void;
 }) {
+  const t = useT();
   const questionMap = Object.fromEntries(questions.map((q) => [q.id, q]));
   const isPerfect = response.correctCount === response.totalCount;
   const isGood = response.score >= 70;
@@ -187,16 +193,12 @@ function ResultView({
       {/* 점수 배너 */}
       <View style={[styles.resultBanner, { borderTopColor: scoreColor }]}>
         <Text style={styles.resultEmoji}>{isPerfect ? '🎉' : isGood ? '👍' : '📖'}</Text>
-        <Text style={[styles.resultScore, { color: scoreColor }]}>{response.score}점</Text>
+        <Text style={[styles.resultScore, { color: scoreColor }]}>{response.score}{t.quizPointsSuffix}</Text>
         <Text style={styles.resultSub}>
-          {response.totalCount}문제 중 {response.correctCount}개 정답
+          {t.quizCorrectOf(response.totalCount, response.correctCount)}
         </Text>
         <Text style={styles.resultMessage}>
-          {isPerfect
-            ? '완벽해요! 경희대 꿀팁 마스터!'
-            : isGood
-            ? '잘했어요! 조금만 더 공부하면 완벽!'
-            : '가이드를 다시 읽어보고 재도전해 보세요!'}
+          {isPerfect ? t.quizPerfectMsg : isGood ? t.quizGoodMsg : t.quizRetryMsg}
         </Text>
       </View>
 
@@ -206,13 +208,13 @@ function ResultView({
             {BADGE_META[categoryId]?.emoji ?? '🏅'}
           </Text>
           <Text style={styles.badgeEarnedText}>
-            {BADGE_META[categoryId]?.nameKO} 획득!
+            {badgeName(t, categoryId)}{t.badgeEarnedSuffix}
           </Text>
         </View>
       )}
 
       {/* 문제별 정오 */}
-      <Text style={styles.breakdownTitle}>문제별 결과</Text>
+      <Text style={styles.breakdownTitle}>{t.quizBreakdown}</Text>
       {response.results.map((r, i) => {
         const q = questionMap[r.questionId];
         if (!q) return null;
@@ -230,7 +232,7 @@ function ResultView({
             </View>
             {!r.correct && (
               <View style={styles.correctAnswerRow}>
-                <Text style={styles.correctLabel}>정답: </Text>
+                <Text style={styles.correctLabel}>{t.quizAnswerLabel}</Text>
                 <Text style={styles.correctValue}>{q.options[r.correctAnswer]}</Text>
               </View>
             )}
@@ -242,8 +244,8 @@ function ResultView({
       })}
 
       <View style={styles.resultActions}>
-        <Button label="다시 도전" onPress={onRetry} variant="outline" style={{ flex: 1 }} />
-        <Button label="홈으로" onPress={onHome} style={{ flex: 1 }} />
+        <Button label={t.quizRetry} onPress={onRetry} variant="outline" style={{ flex: 1 }} />
+        <Button label={t.quizHome} onPress={onHome} style={{ flex: 1 }} />
       </View>
       <View style={{ height: Spacing[8] }} />
     </Screen>
@@ -260,6 +262,8 @@ function HomeView({
   loading: boolean;
 }) {
   const router = useRouter();
+  const lang = useLanguage();
+  const t = useT();
 
   return (
     <Screen scrollable padded>
@@ -270,16 +274,14 @@ function HomeView({
         <View style={styles.headerIcon}>
           <Ionicons name="school" size={16} color={Colors.textInverse} />
         </View>
-        <Text style={styles.homeTitle}>KHU 퀴즈</Text>
+        <Text style={styles.homeTitle}>{t.quizHeaderTitle}</Text>
       </View>
 
       <View style={styles.heroBanner}>
         <View style={styles.heroAccent} />
         <Text style={styles.heroEmoji}>🧩</Text>
-        <Text style={styles.heroTitle}>경희대 꿀팁{'\n'}퀴즈 도전!</Text>
-        <Text style={styles.heroDesc}>
-          가이드에서 공부한 내용으로{'\n'}퀴즈를 풀어보세요
-        </Text>
+        <Text style={styles.heroTitle}>{t.quizHeroTitle}</Text>
+        <Text style={styles.heroDesc}>{t.quizHeroDesc}</Text>
       </View>
 
       {/* 카테고리 요약 */}
@@ -287,14 +289,14 @@ function HomeView({
         {KHU_GUIDE.map((cat) => (
           <View key={cat.id} style={[styles.catChip, { backgroundColor: cat.color + '18' }]}>
             <Text style={styles.catChipEmoji}>{cat.emoji}</Text>
-            <Text style={[styles.catChipText, { color: cat.color }]}>{cat.titleKO}</Text>
+            <Text style={[styles.catChipText, { color: cat.color }]}>{pickL10n(cat.title, lang)}</Text>
           </View>
         ))}
       </View>
 
       <View style={styles.actionArea}>
         <Button
-          label={loading ? '문제 불러오는 중...' : '퀴즈 시작하기 →'}
+          label={loading ? t.quizLoading : t.quizStart}
           onPress={onQuiz}
           disabled={loading}
           fullWidth
@@ -306,11 +308,11 @@ function HomeView({
       <Card style={styles.infoCard}>
         <View style={styles.infoRow}>
           <Ionicons name="help-circle-outline" size={18} color={Colors.accent} />
-          <Text style={styles.infoText}>총 14문제 · 객관식 4지선다</Text>
+          <Text style={styles.infoText}>{t.quizInfoCount}</Text>
         </View>
         <View style={styles.infoRow}>
           <Ionicons name="trophy-outline" size={18} color={Colors.accent} />
-          <Text style={styles.infoText}>점수는 프로필 경희 온도에 반영 예정</Text>
+          <Text style={styles.infoText}>{t.quizInfoScore}</Text>
         </View>
       </Card>
     </Screen>
@@ -321,6 +323,7 @@ function HomeView({
 
 export default function QuizScreen() {
   const { category } = useLocalSearchParams<{ category?: string }>();
+  const lang = useLanguage();
   const categoryId = (category ?? '') as BadgeId;
   const [view, setView] = useState<View>('home');
   const [fetchedQuestions, setFetchedQuestions] = useState<QuizQuestion[]>([]);
@@ -328,7 +331,7 @@ export default function QuizScreen() {
   const [result, setResult] = useState<QuizSubmitResponse | null>(null);
 
   const questions = category
-    ? getQuestionsByCategory(category)
+    ? getLocalQuestions(category, lang)
     : fetchedQuestions;
 
   const loadQuestions = async () => {
@@ -339,8 +342,9 @@ export default function QuizScreen() {
       setFetchedQuestions(qs);
       return qs;
     } catch {
-      setFetchedQuestions(LOCAL_QUIZ_QUESTIONS);
-      return LOCAL_QUIZ_QUESTIONS;
+      const local = getLocalQuestions(undefined, lang);
+      setFetchedQuestions(local);
+      return local;
     } finally {
       setLoading(false);
     }

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useFocusEffect } from 'expo-router';
 import {
   Alert,
@@ -21,33 +21,25 @@ function showAlert(title: string, message: string) {
   }
 }
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
+import { pickImages } from '@/src/lib/pickImages';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 import { useAuthStore } from '@/src/store/authStore';
 import { memberApi } from '@/src/api/auth';
-import { useT } from '@/src/i18n';
+import { useT, badgeName } from '@/src/i18n';
+import { bucketFromAzure } from '@/src/i18n/preferredLanguage';
+import { departmentOptions, countryOptions, languageOptions, languageDisplay } from '@/src/data/selectOptions';
+import { departmentLabel, countryLabel } from '@/src/data/labels';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
-import type { Language, MentoringRole } from '@/src/types/auth';
+import type { MentoringRole } from '@/src/types/auth';
 import { badgeApi } from '@/src/api/badge';
 import { BADGE_META } from '@/src/types/badge';
 import type { BadgeId, BadgeInfo } from '@/src/types/badge';
 
-const LANG_LABELS: Record<string, string> = {
-  KO: '한국어', EN: 'English', ZH: '中文',
-  VI: 'Tiếng Việt', ES: 'Español', MN: 'Монгол',
-};
-const LANGUAGES: { value: Language; label: string }[] = [
-  { value: 'KO', label: '한국어' },
-  { value: 'EN', label: 'English' },
-  { value: 'ZH', label: '中文' },
-  { value: 'VI', label: 'Tiếng Việt' },
-  { value: 'ES', label: 'Español' },
-  { value: 'MN', label: 'Монгол' },
-];
 const ROLE_COLORS: Record<string, string> = {
   MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
 };
@@ -82,12 +74,18 @@ export default function ProfileScreen() {
   const [department, setDepartment] = useState('');
   const [nationality, setNationality] = useState('');
   const [admissionYear, setAdmissionYear] = useState(CURRENT_YEAR);
-  const [language, setLanguage] = useState<Language>('KO');
+  const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
   const [earnedBadges, setEarnedBadges] = useState<BadgeInfo[]>([]);
+
+  // 편집 중 선택한 선호 언어 버킷으로 드롭다운 옵션 현지화.
+  const editLang = bucketFromAzure(preferredLanguage);
+  const deptOpts = useMemo(() => departmentOptions(editLang), [editLang]);
+  const countryOpts = useMemo(() => countryOptions(editLang), [editLang]);
+  const langOpts = useMemo(() => languageOptions(), []);
 
   useFocusEffect(
     useCallback(() => {
@@ -103,7 +101,7 @@ export default function ProfileScreen() {
     setDepartment(profile.department);
     setNationality(profile.nationality);
     setAdmissionYear(profile.admissionYear);
-    setLanguage(profile.language);
+    setPreferredLanguage(profile.preferredLanguage ?? 'ko');
     setMentoringRole(profile.mentoringRole === 'NONE' ? 'MENTEE' : profile.mentoringRole);
     setError('');
     setIsEditing(true);
@@ -128,7 +126,8 @@ export default function ProfileScreen() {
         department,
         nationality,
         admissionYear,
-        language,
+        language: bucketFromAzure(preferredLanguage),
+        preferredLanguage,
         // 신입생은 mentoringRole 전송하지 않음 (백엔드에서도 MENTEE 고정)
         ...(isNewStudent ? {} : { mentoringRole }),
       });
@@ -142,23 +141,13 @@ export default function ProfileScreen() {
   };
 
   const handlePickImage = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      showAlert(t.permissionNeeded, t.photoPermission);
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
-    if (result.canceled || !result.assets[0]) return;
+    const picked = await pickImages(false);
+    if (!picked[0]) return;
     try {
-      const updated = await memberApi.updateProfileImage(result.assets[0]);
+      const updated = await memberApi.updateProfileImage(picked[0]);
       setProfile(updated);
     } catch {
-      showAlert('오류', t.photoUploadFailed);
+      showAlert(t.errorTitle, t.photoUploadFailed);
     }
   };
 
@@ -235,7 +224,7 @@ export default function ProfileScreen() {
 
       {!isEditing && (
         <View style={styles.badgeSection}>
-          <Text style={styles.badgeSectionTitle}>내 뱃지</Text>
+          <Text style={styles.badgeSectionTitle}>{t.myBadges}</Text>
           <View style={styles.badgeGrid}>
             {(Object.keys(BADGE_META) as BadgeId[]).map((badgeId) => {
               const meta = BADGE_META[badgeId];
@@ -249,7 +238,7 @@ export default function ProfileScreen() {
                     {earned ? meta.emoji : '🔒'}
                   </Text>
                   <Text style={[styles.badgeName, !earned && styles.badgeNameLocked]}>
-                    {meta.nameKO}
+                    {badgeName(t, badgeId)}
                   </Text>
                 </View>
               );
@@ -261,21 +250,41 @@ export default function ProfileScreen() {
       {/* 정보 카드 */}
       {!isEditing ? (
         <Card style={styles.infoCard}>
-          <InfoRow icon="school-outline" label={t.department} value={profile.department} />
+          <InfoRow icon="school-outline" label={t.department} value={departmentLabel(profile.department, profile.language)} />
           <View style={styles.divider} />
-          <InfoRow icon="flag-outline" label={t.nationality} value={profile.nationality} />
+          <InfoRow icon="flag-outline" label={t.nationality} value={countryLabel(profile.nationality, profile.language)} />
           <View style={styles.divider} />
           <InfoRow icon="calendar-outline" label={t.admissionYear} value={t.admissionYearValue(profile.admissionYear)} />
           <View style={styles.divider} />
-          <InfoRow icon="language-outline" label={t.languageLabel} value={LANG_LABELS[profile.language] ?? profile.language} />
+          <InfoRow icon="language-outline" label={t.languageLabel} value={languageDisplay(profile.preferredLanguage) ?? profile.language} />
           <View style={styles.divider} />
           <InfoRow icon="people-outline" label={t.mentoringLabel} value={ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole} />
         </Card>
       ) : (
         <Card style={styles.editCard}>
           <Input label={t.nameLabel} value={name} onChangeText={setName} />
-          <Input label={t.department} value={department} onChangeText={setDepartment} />
-          <Input label={t.nationality} value={nationality} onChangeText={setNationality} />
+          <SearchableSelect
+            label={t.department}
+            placeholder={t.selectDepartment}
+            modalTitle={t.selectDepartment}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={deptOpts}
+            value={department}
+            displayValue={department ? departmentLabel(department, editLang) : undefined}
+            onSelect={setDepartment}
+          />
+          <SearchableSelect
+            label={t.nationality}
+            placeholder={t.selectNationality}
+            modalTitle={t.selectNationality}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={countryOpts}
+            value={nationality}
+            displayValue={nationality ? countryLabel(nationality, editLang) : undefined}
+            onSelect={setNationality}
+          />
 
           {/* 입학년도 */}
           <View>
@@ -294,20 +303,17 @@ export default function ProfileScreen() {
           </View>
 
           {/* 선호 언어 */}
-          <View>
-            <Text style={styles.sectionLabel}>{t.preferredLanguage}</Text>
-            <View style={styles.langGrid}>
-              {LANGUAGES.map((l) => (
-                <TouchableOpacity
-                  key={l.value}
-                  onPress={() => setLanguage(l.value)}
-                  style={[styles.chip, language === l.value && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, language === l.value && styles.chipTextActive]}>{l.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <SearchableSelect
+            label={t.preferredLanguage}
+            placeholder={t.selectLanguage}
+            modalTitle={t.selectLanguage}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={langOpts}
+            value={preferredLanguage}
+            displayValue={languageDisplay(preferredLanguage)}
+            onSelect={setPreferredLanguage}
+          />
 
           {/* 멘토링 역할 */}
           <View>

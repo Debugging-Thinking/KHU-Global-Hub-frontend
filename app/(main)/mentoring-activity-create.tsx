@@ -16,22 +16,24 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
+import { useT } from "@/src/i18n";
 import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
 
 export default function MentoringActivityCreateScreen() {
   const { matchId, partnerName } = useLocalSearchParams<{ matchId: string; partnerName: string }>();
   const router = useRouter();
+  const t = useT();
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     if (!title.trim()) {
-      Alert.alert("알림", "제목을 입력해주세요.");
+      Alert.alert(t.noticeLabel, t.titleRequiredMsg);
       return;
     }
     if (!content.trim()) {
-      Alert.alert("알림", "내용을 입력해주세요.");
+      Alert.alert(t.noticeLabel, t.contentRequiredMsg);
       return;
     }
 
@@ -43,7 +45,7 @@ export default function MentoringActivityCreateScreen() {
       });
       router.back();
     } catch {
-      Alert.alert("오류", "활동 기록 등록에 실패했습니다. 다시 시도해주세요.");
+      Alert.alert(t.errorTitle, t.activitySubmitFail);
     } finally {
       setSubmitting(false);
     }
@@ -60,7 +62,7 @@ export default function MentoringActivityCreateScreen() {
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>활동 기록 작성</Text>
+          <Text style={styles.headerTitle}>{t.activityCreateTitle}</Text>
           <TouchableOpacity
             style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
             onPress={handleSubmit}
@@ -69,7 +71,7 @@ export default function MentoringActivityCreateScreen() {
             {submitting ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.submitBtnText}>등록</Text>
+              <Text style={styles.submitBtnText}>{t.submitLabel}</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -78,10 +80,10 @@ export default function MentoringActivityCreateScreen() {
 
           {/* 제목 입력 */}
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>제목</Text>
+            <Text style={styles.fieldLabel}>{t.titleFieldLabel}</Text>
             <TextInput
               style={styles.titleInput}
-              placeholder="제목을 입력하세요"
+              placeholder={t.titleInputPlaceholder}
               placeholderTextColor={Colors.textTertiary}
               value={title}
               onChangeText={setTitle}
@@ -94,10 +96,10 @@ export default function MentoringActivityCreateScreen() {
 
           {/* 내용 입력 */}
           <View style={styles.field}>
-            <Text style={styles.fieldLabel}>내용</Text>
+            <Text style={styles.fieldLabel}>{t.contentFieldLabel}</Text>
             <TextInput
               style={styles.contentInput}
-              placeholder={`${partnerName ?? "파트너"}와의 멘토링 활동을 기록해보세요`}
+              placeholder={t.activityContentPlaceholder(partnerName ?? t.partnerFallback)}
               placeholderTextColor={Colors.textTertiary}
               value={content}
               onChangeText={setContent}

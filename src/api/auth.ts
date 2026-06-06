@@ -6,9 +6,11 @@ import type {
   ProfileSetupRequest,
   RegisterRequest,
   VerifyEmailRequest,
+  ForgotPasswordRequest,
+  ResetPasswordRequest,
   Profile,
 } from '../types/auth';
-import type { ImagePickerAsset } from 'expo-image-picker';
+import type { PickedImage } from '../lib/pickImages';
 
 export const authApi = {
   register: (body: RegisterRequest) =>
@@ -28,6 +30,12 @@ export const authApi = {
 
   logout: () =>
     apiClient.post('/auth/logout').then(unwrap<null>),
+
+  forgotPassword: (body: ForgotPasswordRequest) =>
+    apiClient.post('/auth/forgot-password', body).then(unwrap<null>),
+
+  resetPassword: (body: ResetPasswordRequest) =>
+    apiClient.post('/auth/reset-password', body).then(unwrap<null>),
 };
 
 export const memberApi = {
@@ -37,17 +45,16 @@ export const memberApi = {
   updateMe: (body: Partial<ProfileSetupRequest>) =>
     apiClient.put('/members/me', body).then(unwrap<Profile>),
 
-  updateProfileImage: async (asset: ImagePickerAsset): Promise<Profile> => {
+  updateProfileImage: async (asset: PickedImage): Promise<Profile> => {
     const form = new FormData();
     if (Platform.OS === 'web') {
       // 웹: file 객체가 있으면 바로 사용, 없으면 blob URL fetch해서 변환
-      const file = (asset as any).file;
-      if (file) {
-        form.append('image', file);
+      if (asset.file) {
+        form.append('image', asset.file);
       } else {
         const res = await fetch(asset.uri);
         const blob = await res.blob();
-        form.append('image', blob, 'profile.jpg');
+        form.append('image', blob, asset.fileName ?? 'profile.jpg');
       }
       // 웹: Content-Type 수동 설정 금지 → 브라우저가 boundary 포함해서 자동 설정
       return apiClient.patch('/members/me/profile-image', form).then(unwrap<Profile>);

@@ -11,18 +11,21 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 
 import { Screen } from '@/src/components/layout/Screen';
-import { KHU_GUIDE, GuideCategory, GuideTip } from '@/src/data/khuGuide';
+import { KHU_GUIDE, GuideCategory, GuideTip, L10n } from '@/src/data/khuGuide';
 import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
 import { badgeApi } from '@/src/api/badge';
 import type { BadgeId } from '@/src/types/badge';
+import { useLanguage, useT, type Language } from '@/src/i18n';
 
-type Language = 'KO' | 'EN';
+/** L10n에서 현재 언어 선택 (없으면 EN→KO 폴백). */
+const pick = (m: L10n, lang: Language): string => m[lang] ?? m.EN ?? m.KO;
 
 // ─── 팁 카드 ──────────────────────────────────────────────────────
 
 function TipCard({ tip, lang }: { tip: GuideTip; lang: Language }) {
-  const title = lang === 'KO' ? tip.titleKO : tip.titleEN;
-  const content = lang === 'KO' ? tip.contentKO : tip.contentEN;
+  const t = useT();
+  const title = pick(tip.title, lang);
+  const content = pick(tip.content, lang);
 
   return (
     <View style={styles.tipCard}>
@@ -38,7 +41,7 @@ function TipCard({ tip, lang }: { tip: GuideTip; lang: Language }) {
           >
             <Ionicons name="map-outline" size={13} color={Colors.primary} />
             <Text style={styles.mapBtnText}>
-              {lang === 'KO' ? '지도 보기' : 'View Map'}
+              {t.guideViewMap}
             </Text>
           </TouchableOpacity>
         )}
@@ -50,6 +53,7 @@ function TipCard({ tip, lang }: { tip: GuideTip; lang: Language }) {
 // ─── 카테고리 상세 ─────────────────────────────────────────────────
 
 function CategoryDetailView({ category, lang }: { category: GuideCategory; lang: Language }) {
+  const t = useT();
   return (
     <ScrollView
       style={styles.detailScroll}
@@ -60,10 +64,10 @@ function CategoryDetailView({ category, lang }: { category: GuideCategory; lang:
         <Text style={styles.detailEmoji}>{category.emoji}</Text>
         <View>
           <Text style={styles.detailTitle}>
-            {lang === 'KO' ? category.titleKO : category.titleEN}
+            {pick(category.title, lang)}
           </Text>
           <Text style={styles.detailCount}>
-            {category.tips.length}{lang === 'KO' ? '개 항목' : ' items'}
+            {category.tips.length}{t.guideItemsSuffix}
           </Text>
         </View>
       </View>
@@ -90,6 +94,7 @@ function HomeView({
   onQuiz: (categoryId: string) => void;
   earnedBadges: Set<BadgeId>;
 }) {
+  const t = useT();
   return (
     <ScrollView
       style={styles.homeScroll}
@@ -100,20 +105,12 @@ function HomeView({
       <View style={styles.heroBanner}>
         <View style={styles.heroAccent} />
         <Text style={styles.heroEmoji}>🏫</Text>
-        <Text style={styles.heroTitle}>
-          {lang === 'KO' ? '경희대 신입생\n필수 가이드' : 'Essential Guide\nfor KHU Freshmen'}
-        </Text>
-        <Text style={styles.heroDesc}>
-          {lang === 'KO'
-            ? '수강신청·교통·맛집 등\n꼭 알아야 할 꿀팁을 모아뒀어요'
-            : 'Everything you need to know\nabout campus life at KHU'}
-        </Text>
+        <Text style={styles.heroTitle}>{t.guideHeroTitle}</Text>
+        <Text style={styles.heroDesc}>{t.guideHeroDesc}</Text>
       </View>
 
       {/* 카테고리 그리드 */}
-      <Text style={styles.sectionLabel}>
-        {lang === 'KO' ? '카테고리' : 'Categories'}
-      </Text>
+      <Text style={styles.sectionLabel}>{t.guideCategoriesLabel}</Text>
       <View style={styles.grid}>
         {KHU_GUIDE.map((cat) => {
           const earned = earnedBadges.has(cat.id as BadgeId);
@@ -126,10 +123,10 @@ function HomeView({
             >
               <Text style={styles.categoryEmoji}>{cat.emoji}</Text>
               <Text style={styles.categoryTitle}>
-                {lang === 'KO' ? cat.titleKO : cat.titleEN}
+                {pick(cat.title, lang)}
               </Text>
               {earned ? (
-                <Text style={[styles.categoryCount, { color: cat.color }]}>🏅 획득!</Text>
+                <Text style={[styles.categoryCount, { color: cat.color }]}>{t.guideEarned}</Text>
               ) : (
                 <TouchableOpacity
                   style={[styles.quizSmallBtn, { borderColor: cat.color }]}
@@ -137,7 +134,7 @@ function HomeView({
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.quizSmallBtnText, { color: cat.color }]}>
-                    {lang === 'KO' ? '퀴즈' : 'Quiz'}
+                    {t.guideQuizBtn}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -154,7 +151,8 @@ function HomeView({
 // ─── 메인 ─────────────────────────────────────────────────────────
 
 export default function GuideScreen() {
-  const [lang, setLang] = useState<Language>('KO');
+  const lang = useLanguage();
+  const t = useT();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [earnedBadges, setEarnedBadges] = useState<Set<BadgeId>>(new Set());
   const router = useRouter();
@@ -191,17 +189,9 @@ export default function GuideScreen() {
 
         <Text style={styles.headerTitle} numberOfLines={1}>
           {selectedCategory
-            ? lang === 'KO' ? selectedCategory.titleKO : selectedCategory.titleEN
-            : lang === 'KO' ? 'KHU 가이드' : 'KHU Guide'}
+            ? pick(selectedCategory.title, lang)
+            : t.guideHeaderTitle}
         </Text>
-
-        <TouchableOpacity
-          style={styles.langToggle}
-          onPress={() => setLang((l) => (l === 'KO' ? 'EN' : 'KO'))}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.langToggleText}>{lang === 'KO' ? 'EN' : '한'}</Text>
-        </TouchableOpacity>
       </View>
 
       {selectedCategory ? (

@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
+import { useT } from "@/src/i18n";
 import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
 
 interface ActivityItem {
@@ -31,6 +32,7 @@ function formatDate(iso: string) {
 export default function MentoringActivityScreen() {
   const { matchId, partnerName } = useLocalSearchParams<{ matchId: string; partnerName: string }>();
   const router = useRouter();
+  const t = useT();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -57,14 +59,14 @@ export default function MentoringActivityScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>멘토링 활동 기록</Text>
+        <Text style={styles.headerTitle}>{t.mentoringActivityLog}</Text>
         <TouchableOpacity
           style={styles.writeBtn}
           onPress={() =>
             router.push(`/(main)/mentoring-activity-create?matchId=${matchId}&partnerName=${partnerName}`)
           }
         >
-          <Text style={styles.writeBtnText}>작성</Text>
+          <Text style={styles.writeBtnText}>{t.writeLabel}</Text>
         </TouchableOpacity>
       </View>
 
@@ -75,8 +77,8 @@ export default function MentoringActivityScreen() {
       ) : activities.length === 0 ? (
         <View style={styles.center}>
           <Ionicons name="document-outline" size={48} color={Colors.border} />
-          <Text style={styles.emptyText}>활동 기록이 아직 없어요</Text>
-          <Text style={styles.emptyDesc}>첫 번째 활동 기록을 작성해보세요!</Text>
+          <Text style={styles.emptyText}>{t.activityEmpty}</Text>
+          <Text style={styles.emptyDesc}>{t.activityEmptyDesc}</Text>
         </View>
       ) : (
         <FlatList

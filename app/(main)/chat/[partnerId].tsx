@@ -3,6 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -15,22 +16,65 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { chatApi } from '@/src/api/chat';
+import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
+import { useAutoTranslate } from '@/src/hooks/useTextTranslate';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { ChatMessage } from '@/src/types/chat';
 
 const POLL_INTERVAL = 5000;
+
+/**
+ * 채팅 말풍선. 1:1 채팅은 항상 동적 — 받은 메시지는 자동으로 내 언어로 번역되어 표시되고,
+ * "원문 보기" 토글로 되돌릴 수 있다. 번역 결과는 messageId 단위로 캐시되어 5초 폴링에도 재번역하지 않는다.
+ */
+function MessageBubble({
+  item,
+  isMine,
+  target,
+  t,
+}: {
+  item: ChatMessage;
+  isMine: boolean;
+  target: string;
+  t: ReturnType<typeof useT>;
+}) {
+  const tr = useAutoTranslate([item.content], target, !isMine);
+  return (
+    <View style={[styles.msgRow, isMine && styles.msgRowRight]}>
+      <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
+        {(isMine ? item.content : tr.displays[0]) ? (
+          <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
+            {isMine ? item.content : tr.displays[0]}
+          </Text>
+        ) : null}
+        {item.imageUrl ? (
+          <Image source={{ uri: item.imageUrl }} style={styles.msgImage} resizeMode="cover" />
+        ) : null}
+        {!isMine && (tr.ready || tr.loading) && (
+          <TouchableOpacity onPress={tr.toggle} style={styles.translateLink}>
+            <Text style={styles.translateLinkText}>
+              {tr.loading ? t.translating : tr.showOriginal ? t.viewTranslation : t.viewOriginal}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
+  );
+}
 
 export default function ChatRoomScreen() {
   const router = useRouter();
   const t = useT();
   const { partnerId } = useLocalSearchParams<{ partnerId: string }>();
   const myId = useAuthStore((s) => s.profile?.memberId);
+  const target = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
 
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const pollTimer = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -57,12 +101,14 @@ export default function ChatRoomScreen() {
   }, [messages.length]);
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    if ((!text.trim() && !imageUrl) || sending) return;
     setSending(true);
     const body = text.trim();
+    const img = imageUrl;
     setText('');
+    setImageUrl(null);
     try {
-      await chatApi.sendMessage({ receiverId: Number(partnerId), content: body });
+      await chatApi.sendMessage({ receiverId: Number(partnerId), content: body, imageUrl: img });
       await fetchMessages();
     } catch {} finally {
       setSending(false);
@@ -71,22 +117,15 @@ export default function ChatRoomScreen() {
 
   function renderMessage({ item }: { item: ChatMessage }) {
     if (item.isSystem) {
+      // 시스템 메시지(멘토링 매칭 안내)는 정적 텍스트로 취급 — 보는 사람 언어로 표시.
       return (
         <View style={styles.systemMsg}>
-          <Text style={styles.systemText}>{item.content}</Text>
+          <Text style={styles.systemText}>{t.chatMatchSystem}</Text>
         </View>
       );
     }
     const isMine = item.senderId === myId;
-    return (
-      <View style={[styles.msgRow, isMine && styles.msgRowRight]}>
-        <View style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}>
-          <Text style={[styles.bubbleText, isMine && styles.bubbleTextMine]}>
-            {item.content}
-          </Text>
-        </View>
-      </View>
-    );
+    return <MessageBubble item={item} isMine={isMine} target={target} t={t} />;
   }
 
   return (
@@ -122,6 +161,7 @@ export default function ChatRoomScreen() {
 
         {/* 입력창 */}
         <View style={styles.inputBar}>
+          <ImagePickerButton imageUrl={imageUrl} onChange={setImageUrl} />
           <TextInput
             style={styles.input}
             placeholder={t.messagePlaceholder}
@@ -132,8 +172,8 @@ export default function ChatRoomScreen() {
           />
           <TouchableOpacity
             onPress={handleSend}
-            disabled={!text.trim() || sending}
-            style={[styles.sendBtn, (!text.trim() || sending) && styles.sendDisabled]}
+            disabled={(!text.trim() && !imageUrl) || sending}
+            style={[styles.sendBtn, ((!text.trim() && !imageUrl) || sending) && styles.sendDisabled]}
           >
             <Ionicons name="send" size={18} color={Colors.textInverse} />
           </TouchableOpacity>
@@ -191,6 +231,9 @@ const styles = StyleSheet.create({
     lineHeight: Typography.base * Typography.normal,
   },
   bubbleTextMine: { color: Colors.textInverse },
+  msgImage: { width: 180, height: 180, borderRadius: Radius.md, marginTop: Spacing[1] },
+  translateLink: { marginTop: Spacing[1], alignSelf: 'flex-start' },
+  translateLinkText: { fontSize: Typography.xs, color: Colors.primary, fontWeight: Typography.medium },
   systemMsg: {
     alignItems: 'center',
     paddingVertical: Spacing[2],

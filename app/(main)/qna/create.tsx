@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
+import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
@@ -24,6 +25,7 @@ export default function CreateQnAScreen() {
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -31,6 +33,7 @@ export default function CreateQnAScreen() {
   useFocusEffect(useCallback(() => {
     setTitle('');
     setContent('');
+    setImageUrl(null);
     setIsAnonymous(false);
     setError('');
   }, []));
@@ -43,7 +46,7 @@ export default function CreateQnAScreen() {
     setError('');
     setLoading(true);
     try {
-      await qnaApi.createQna({ title, content, isAnonymous, language: language as any });
+      await qnaApi.createQna({ title, content, isAnonymous, language: language as any, imageUrl });
       router.replace('/(main)/qna');
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t.createQnaFailed);
@@ -83,7 +86,8 @@ export default function CreateQnAScreen() {
           textAlignVertical="top"
         />
         <View style={styles.anonymousRow}>
-          <Ionicons name="person-outline" size={18} color={Colors.textSecondary} />
+          <ImagePickerButton imageUrl={imageUrl} onChange={setImageUrl} />
+          <Ionicons name="person-outline" size={18} color={Colors.textSecondary} style={{ marginLeft: Spacing[2] }} />
           <Text style={styles.anonymousLabel}>{t.postAnonymously}</Text>
           <Switch
             value={isAnonymous}

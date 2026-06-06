@@ -8,8 +8,26 @@ export type { Language, T };
  * @param override 선택적 언어 오버라이드 (프로필 설정 화면 등에서 사용)
  */
 export function useT(override?: Language): T {
-  const language = useAuthStore((s) => s.profile?.language ?? 'KO') as Language;
-  return translations[override ?? language] ?? translations.KO;
+  // profile.language는 6개 버킷(6개 외 사용자는 EN). 미설정/누락 시 EN 폴백.
+  const language = useAuthStore((s) => s.profile?.language ?? 'EN') as Language;
+  return translations[override ?? language] ?? translations.EN;
+}
+
+/** 현재 유저의 언어 코드만 반환 (정적 콘텐츠 L10n 선택용). 미설정 시 KO. */
+export function useLanguage(): Language {
+  return useAuthStore((s) => s.profile?.language ?? 'KO') as Language;
+}
+
+/** 뱃지 ID → 현지화된 뱃지 이름. */
+export function badgeName(t: T, id: string): string {
+  switch (id) {
+    case 'COURSE_REG': return t.badgeCourseReg;
+    case 'TRANSPORT': return t.badgeTransport;
+    case 'FOOD': return t.badgeFood;
+    case 'CAMPUS_SITE': return t.badgeCampusSite;
+    case 'HUMANITIES': return t.badgeHumanities;
+    default: return id;
+  }
 }
 
 /**

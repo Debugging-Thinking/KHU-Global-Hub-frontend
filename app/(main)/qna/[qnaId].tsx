@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -25,29 +26,42 @@ function confirmAction(title: string, message: string, cancelLabel: string, dele
 import { Ionicons } from '@expo/vector-icons';
 
 import { Screen } from '@/src/components/layout/Screen';
+import { AuthorName } from '@/src/components/ui/AuthorName';
+import { Attachment } from '@/src/components/ui/Attachment';
+import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
+import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
+import { useItemTranslation } from '@/src/hooks/useTextTranslate';
+import type { Language } from '@/src/i18n';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { AnswerResponse, QnADetail } from '@/src/types/qna';
 
 function AnswerCard({
   answer,
   isQnaOwner,
-  qnaId,
   t,
+  prestored,
+  viewerBucket,
+  preferredCode,
   onAdopt,
   onLike,
   onDelete,
+  onAuthorPress,
 }: {
   answer: AnswerResponse;
   isQnaOwner: boolean;
-  qnaId: number;
   t: ReturnType<typeof useT>;
+  prestored: boolean;
+  viewerBucket: Language;
+  preferredCode: string;
   onAdopt: (answerId: number) => void;
   onLike: (answerId: number) => void;
   onDelete: (answerId: number) => void;
+  onAuthorPress: (id: number) => void;
 }) {
+  const tr = useItemTranslation([answer.content], [answer.originalContent], answer.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
     <View style={[styles.answerCard, answer.isAdopted && styles.answerAdopted]}>
       {answer.isAdopted && (
@@ -57,7 +71,7 @@ function AnswerCard({
         </View>
       )}
       <View style={styles.answerHeader}>
-        <Text style={styles.answerAuthor}>{answer.authorName}</Text>
+        <AuthorName name={answer.authorName} authorId={answer.authorId} onPress={onAuthorPress} style={styles.answerAuthor} />
         <Text style={styles.answerTime}>{timeAgo(answer.createdAt, t)}</Text>
         {answer.isOwner && (
           <TouchableOpacity onPress={() => onDelete(answer.answerId)} style={{ marginLeft: 'auto' }}>
@@ -65,7 +79,8 @@ function AnswerCard({
           </TouchableOpacity>
         )}
       </View>
-      <Text style={styles.answerContent}>{answer.content}</Text>
+      <Text style={styles.answerContent}>{tr.displays[0]}</Text>
+      {answer.imageUrl ? <Attachment url={answer.imageUrl} imageStyle={styles.qnaImage} /> : null}
       <View style={styles.answerActions}>
         <TouchableOpacity onPress={() => onLike(answer.answerId)} style={styles.likeBtn}>
           <Ionicons
@@ -75,11 +90,20 @@ function AnswerCard({
           />
           <Text style={styles.likeText}>{answer.likeCount}</Text>
         </TouchableOpacity>
-        {isQnaOwner && !answer.isAdopted && (
-          <TouchableOpacity onPress={() => onAdopt(answer.answerId)} style={styles.adoptBtn}>
-            <Text style={styles.adoptBtnText}>{t.adopt}</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.answerActionsRight}>
+          {tr.showToggle && (
+            <TouchableOpacity onPress={tr.toggle}>
+              <Text style={styles.answerTranslateText}>
+                {tr.loading ? t.translating : tr.showOriginal ? t.viewTranslation : t.viewOriginal}
+              </Text>
+            </TouchableOpacity>
+          )}
+          {isQnaOwner && !answer.isAdopted && (
+            <TouchableOpacity onPress={() => onAdopt(answer.answerId)} style={styles.adoptBtn}>
+              <Text style={styles.adoptBtnText}>{t.adopt}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -90,50 +114,50 @@ export default function QnADetailScreen() {
   const t = useT();
   const { qnaId } = useLocalSearchParams<{ qnaId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
+  const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  const prestored = isPrestoredMode(preferredCode);
 
   const [qna, setQna] = useState<QnADetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [answerText, setAnswerText] = useState('');
+  const [answerImage, setAnswerImage] = useState<string | null>(null);
   const [answerAnonymous, setAnswerAnonymous] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  // 번역 토글: false = 번역본(기본), true = 원문
-  const [showingOriginal, setShowingOriginal] = useState(false);
+  // 질문 본문(제목+본문 한 단위) 항목별 원문↔번역 토글.
+  const qnaTr = useItemTranslation(
+    [qna?.title ?? '', qna?.content ?? ''],
+    [qna?.originalTitle ?? '', qna?.originalContent ?? ''],
+    qna?.originalLanguage,
+    prestored,
+    userLanguage as Language,
+    preferredCode,
+  );
 
   const id = Number(qnaId);
+  const goProfile = (memberId: number) => router.push(`/(main)/mentor-profile?memberId=${memberId}` as any);
 
-  const reload = async (lang?: string) => {
-    const data = await qnaApi.getQna(id, (lang ?? userLanguage) as any);
+  const reload = async () => {
+    const data = await qnaApi.getQna(id, userLanguage as any);
     setQna(data);
   };
 
   useEffect(() => {
-    setShowingOriginal(false);
     reload().finally(() => setLoading(false));
   }, [qnaId, userLanguage]);
 
-  const handleToggleTranslation = async () => {
-    if (!qna) return;
-    const nextShowingOriginal = !showingOriginal;
-    const fetchLang = nextShowingOriginal ? qna.originalLanguage : userLanguage;
-    try {
-      await reload(fetchLang);
-      setShowingOriginal(nextShowingOriginal);
-    } catch {}
-  };
-
   const handleLikeQna = async () => {
     await qnaApi.likeQna(id);
-    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
+    reload();
   };
 
   const handleAdopt = async (answerId: number) => {
     await qnaApi.adoptAnswer(id, answerId);
-    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
+    reload();
   };
 
   const handleLikeAnswer = async (answerId: number) => {
     await qnaApi.likeAnswer(id, answerId);
-    reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
+    reload();
   };
 
   const handleDeleteQna = () => {
@@ -149,7 +173,7 @@ export default function QnADetailScreen() {
     confirmAction(t.deleteAnswer, t.confirmDeleteAnswer, t.cancel, t.delete, async () => {
       try {
         await qnaApi.deleteAnswer(id, answerId);
-        reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
+        reload();
       } catch {}
     });
   };
@@ -158,15 +182,16 @@ export default function QnADetailScreen() {
     if (!answerText.trim()) return;
     setSubmitting(true);
     try {
-      await qnaApi.createAnswer(id, { content: answerText, isAnonymous: answerAnonymous, language: userLanguage as any });
+      await qnaApi.createAnswer(id, { content: answerText, isAnonymous: answerAnonymous, language: userLanguage as any, imageUrl: answerImage });
       setAnswerText('');
-      reload(showingOriginal && qna ? qna.originalLanguage : userLanguage);
+      setAnswerImage(null);
+      reload();
     } catch (e: any) {
       const msg = e?.response?.data?.message;
       if (Platform.OS === 'web') {
         window.alert(msg ?? t.answerFailed);
       } else {
-        Alert.alert(t.error ?? '오류', msg ?? t.answerFailed);
+        Alert.alert(t.errorTitle, msg ?? t.answerFailed);
       }
     } finally {
       setSubmitting(false);
@@ -185,7 +210,8 @@ export default function QnADetailScreen() {
 
   if (!qna) return null;
 
-  const showToggle = qna.originalLanguage !== userLanguage;
+  const bodyTitle = qnaTr.displays[0];
+  const bodyContent = qnaTr.displays[1];
 
   return (
     <Screen padded={false}>
@@ -206,28 +232,29 @@ export default function QnADetailScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* 질문 */}
         <View style={styles.question}>
-          <Text style={styles.questionTitle}>{qna.title}</Text>
+          <Text style={styles.questionTitle}>{bodyTitle}</Text>
           <View style={styles.questionMeta}>
-            <Text style={styles.metaText}>{qna.authorName}</Text>
+            <AuthorName name={qna.authorName} authorId={qna.authorId} onPress={goProfile} style={styles.metaText} />
             <Text style={styles.metaDot}>·</Text>
             <Text style={styles.metaText}>{timeAgo(qna.createdAt, t)}</Text>
           </View>
 
-          {/* 번역 토글 버튼 */}
-          {showToggle && (
-            <TouchableOpacity onPress={handleToggleTranslation} style={styles.translateBtn}>
+          {/* 질문 본문 원문↔번역 토글 (항목별) */}
+          {qnaTr.showToggle && (
+            <TouchableOpacity onPress={qnaTr.toggle} style={styles.translateBtn} disabled={qnaTr.loading}>
               <Ionicons
-                name={showingOriginal ? 'language-outline' : 'document-text-outline'}
+                name={qnaTr.showOriginal ? 'document-text-outline' : 'language-outline'}
                 size={14}
                 color={Colors.primary}
               />
               <Text style={styles.translateBtnText}>
-                {showingOriginal ? t.viewTranslation : t.viewOriginal}
+                {qnaTr.loading ? t.translating : qnaTr.showOriginal ? t.viewTranslation : t.viewOriginal}
               </Text>
             </TouchableOpacity>
           )}
 
-          <Text style={styles.questionContent}>{qna.content}</Text>
+          <Text style={styles.questionContent}>{bodyContent}</Text>
+          {qna.imageUrl ? <Attachment url={qna.imageUrl} imageStyle={styles.qnaImage} /> : null}
           <TouchableOpacity onPress={handleLikeQna} style={styles.likeBtn}>
             <Ionicons
               name={qna.isLiked ? 'heart' : 'heart-outline'}
@@ -246,11 +273,14 @@ export default function QnADetailScreen() {
               key={a.answerId}
               answer={a}
               isQnaOwner={qna.isOwner}
-              qnaId={id}
               t={t}
+              prestored={prestored}
+              viewerBucket={userLanguage as Language}
+              preferredCode={preferredCode}
               onAdopt={handleAdopt}
               onLike={handleLikeAnswer}
               onDelete={handleDeleteAnswer}
+              onAuthorPress={goProfile}
             />
           ))}
           <View style={{ height: Spacing[16] }} />
@@ -275,6 +305,7 @@ export default function QnADetailScreen() {
           </TouchableOpacity>
         </View>
         <View style={styles.inputRow}>
+          <ImagePickerButton imageUrl={answerImage} onChange={setAnswerImage} />
           <TextInput
             style={styles.input}
             placeholder={t.answerPlaceholder}
@@ -352,6 +383,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     lineHeight: Typography.base * Typography.relaxed,
   },
+  qnaImage: { width: 200, height: 200, borderRadius: Radius.md, marginTop: Spacing[2] },
   likeBtn: { flexDirection: 'row', alignItems: 'center', gap: Spacing[1], alignSelf: 'flex-start' },
   likeText: { fontSize: Typography.sm, color: Colors.textTertiary },
   answersSection: { padding: Spacing[5], gap: Spacing[4] },
@@ -396,6 +428,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  answerActionsRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing[3] },
+  answerTranslateText: { fontSize: Typography.xs, color: Colors.primary, fontWeight: Typography.medium },
   adoptBtn: {
     paddingHorizontal: Spacing[3],
     paddingVertical: Spacing[1],

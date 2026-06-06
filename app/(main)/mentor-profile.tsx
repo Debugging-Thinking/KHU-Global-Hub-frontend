@@ -13,6 +13,9 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
+import { useLanguage, useT } from "@/src/i18n";
+import { departmentLabel, countryLabel } from "@/src/data/labels";
+import { languageDisplay } from "@/src/data/selectOptions";
 import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
 
 interface PartnerProfile {
@@ -22,6 +25,7 @@ interface PartnerProfile {
   department: string;
   nationality: string;
   language: string;
+  preferredLanguage?: string;
   mentoringRole: string;
   admissionYear: number;
   bio: string | null;
@@ -32,18 +36,16 @@ const LANGUAGE_LABEL: Record<string, string> = {
   EN: "English",
   ZH: "Chinese",
   VI: "Vietnamese",
-  ES: "Spanish",
+  UZ: "Uzbek",
   MN: "Mongolian",
-};
-
-const ROLE_LABEL: Record<string, string> = {
-  MENTOR: "멘토",
-  MENTEE: "멘티",
 };
 
 export default function MentorProfileScreen() {
   const { memberId } = useLocalSearchParams<{ memberId: string }>();
   const router = useRouter();
+  const lang = useLanguage();
+  const t = useT();
+  const roleText = (r: string) => (r === "MENTOR" ? t.mentor : r === "MENTEE" ? t.mentee : t.none);
   const [profile, setProfile] = useState<PartnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -67,7 +69,7 @@ export default function MentorProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>프로필 정보</Text>
+        <Text style={styles.headerTitle}>{t.profileInfo}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -78,7 +80,7 @@ export default function MentorProfileScreen() {
       ) : error || !profile ? (
         <View style={styles.center}>
           <Ionicons name="alert-circle-outline" size={48} color={Colors.border} />
-          <Text style={styles.errorText}>프로필을 불러올 수 없습니다.</Text>
+          <Text style={styles.errorText}>{t.profileLoadFail}</Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.body} showsVerticalScrollIndicator={false}>
@@ -100,7 +102,7 @@ export default function MentorProfileScreen() {
                 color={roleColor}
               />
               <Text style={[styles.roleText, { color: roleColor }]}>
-                {ROLE_LABEL[profile.mentoringRole] ?? profile.mentoringRole}
+                {roleText(profile.mentoringRole)}
               </Text>
             </View>
           </View>
@@ -114,8 +116,8 @@ export default function MentorProfileScreen() {
                 <Ionicons name="school-outline" size={20} color={Colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>학과</Text>
-                <Text style={styles.infoValue}>{profile.department}</Text>
+                <Text style={styles.infoLabel}>{t.department}</Text>
+                <Text style={styles.infoValue}>{departmentLabel(profile.department, lang)}</Text>
               </View>
             </View>
             <View style={styles.divider} />
@@ -126,8 +128,8 @@ export default function MentorProfileScreen() {
                 <Ionicons name="globe-outline" size={20} color={Colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>국적</Text>
-                <Text style={styles.infoValue}>{profile.nationality}</Text>
+                <Text style={styles.infoLabel}>{t.nationality}</Text>
+                <Text style={styles.infoValue}>{countryLabel(profile.nationality, lang)}</Text>
               </View>
             </View>
             <View style={styles.divider} />
@@ -138,9 +140,9 @@ export default function MentorProfileScreen() {
                 <Ionicons name="chatbubble-ellipses-outline" size={20} color={Colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>사용 언어</Text>
+                <Text style={styles.infoLabel}>{t.languageLabel}</Text>
                 <Text style={styles.infoValue}>
-                  {LANGUAGE_LABEL[profile.language] ?? profile.language}
+                  {languageDisplay(profile.preferredLanguage) ?? LANGUAGE_LABEL[profile.language] ?? profile.language}
                 </Text>
               </View>
             </View>
@@ -152,9 +154,9 @@ export default function MentorProfileScreen() {
                 <Ionicons name="person-circle-outline" size={20} color={Colors.primary} />
               </View>
               <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>자기소개</Text>
+                <Text style={styles.infoLabel}>{t.bioLabel}</Text>
                 <Text style={[styles.infoValue, !profile.bio && styles.infoValueEmpty]}>
-                  {profile.bio ?? "아직 자기소개가 없습니다."}
+                  {profile.bio ?? t.noBio}
                 </Text>
               </View>
             </View>

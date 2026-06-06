@@ -9,13 +9,13 @@ import type {
 } from '../types/qna';
 
 export const qnaApi = {
-  getQnas: (language: Language = 'KO', page = 0, size = 20) =>
+  getQnas: (language: Language = 'KO', page = 0, size = 20, original = false) =>
     apiClient
-      .get('/qnas', { params: { language, page, size } })
+      .get('/qnas', { params: { language, page, size, original } })
       .then(unwrap<PageResponse<QnASummary>>),
 
-  getQna: (qnaId: number, language: Language = 'KO') =>
-    apiClient.get(`/qnas/${qnaId}`, { params: { language } }).then(unwrap<QnADetail>),
+  getQna: (qnaId: number, language: Language = 'KO', original = false) =>
+    apiClient.get(`/qnas/${qnaId}`, { params: { language, original } }).then(unwrap<QnADetail>),
 
   createQna: (body: CreateQnARequest) =>
     apiClient.post('/qnas', body).then(unwrap<QnADetail>),

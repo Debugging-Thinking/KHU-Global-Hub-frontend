@@ -1,6 +1,7 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
+  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -11,12 +12,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { pickFiles, type PickedImage } from '@/src/lib/pickImages';
 import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { boardApi } from '@/src/api/board';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 
 export default function CreatePostScreen() {
   const router = useRouter();
@@ -25,6 +27,7 @@ export default function CreatePostScreen() {
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [images, setImages] = useState<PickedImage[]>([]);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -32,9 +35,18 @@ export default function CreatePostScreen() {
   useFocusEffect(useCallback(() => {
     setTitle('');
     setContent('');
+    setImages([]);
     setIsAnonymous(false);
     setError('');
   }, []));
+
+  const addImages = async () => {
+    const picked = await pickFiles(true);
+    if (picked.length) setImages((prev) => [...prev, ...picked].slice(0, 5));
+  };
+
+  const isImageAsset = (a: PickedImage) =>
+    (a.mimeType ?? '').startsWith('image') || /\.(jpe?g|png|gif|webp|bmp|svg)$/i.test(a.fileName ?? '');
 
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
@@ -44,7 +56,7 @@ export default function CreatePostScreen() {
     setError('');
     setLoading(true);
     try {
-      await boardApi.createPost({ title, content, isAnonymous, language: language as any });
+      await boardApi.createPost({ title, content, isAnonymous, language: language as any }, images);
       router.back();
     } catch (e: any) {
       setError(e?.response?.data?.message ?? t.createPostFailed);
@@ -87,6 +99,34 @@ export default function CreatePostScreen() {
           multiline
           textAlignVertical="top"
         />
+
+        {/* 이미지 첨부 (최대 5장) */}
+        <View style={styles.imageRow}>
+          {images.map((img, i) => (
+            <View key={i} style={styles.thumbWrap}>
+              {isImageAsset(img) ? (
+                <Image source={{ uri: img.uri }} style={styles.thumb} />
+              ) : (
+                <View style={styles.fileThumb}>
+                  <Ionicons name="document-attach-outline" size={20} color={Colors.primary} />
+                  <Text style={styles.fileThumbName} numberOfLines={2}>{img.fileName ?? 'file'}</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.thumbRemove}
+                onPress={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                hitSlop={6}
+              >
+                <Ionicons name="close-circle" size={18} color={Colors.textInverse} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          {images.length < 5 && (
+            <TouchableOpacity style={styles.addImage} onPress={addImages}>
+              <Ionicons name="attach" size={24} color={Colors.textSecondary} />
+            </TouchableOpacity>
+          )}
+        </View>
 
         {/* 익명 설정 */}
         <View style={styles.anonymousRow}>
@@ -142,6 +182,32 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     minHeight: 300,
     lineHeight: Typography.base * Typography.relaxed,
+  },
+  imageRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing[2],
+    paddingHorizontal: Spacing[5],
+    paddingVertical: Spacing[3],
+  },
+  thumbWrap: { position: 'relative' },
+  thumb: { width: 64, height: 64, borderRadius: Radius.sm, backgroundColor: Colors.surfaceSecondary },
+  fileThumb: {
+    width: 64, height: 64, borderRadius: Radius.sm,
+    backgroundColor: Colors.surfaceSecondary,
+    alignItems: 'center', justifyContent: 'center', padding: 4, gap: 2,
+  },
+  fileThumbName: { fontSize: 9, color: Colors.textSecondary, textAlign: 'center' },
+  thumbRemove: { position: 'absolute', top: -6, right: -6, backgroundColor: Colors.overlay, borderRadius: Radius.full },
+  addImage: {
+    width: 64,
+    height: 64,
+    borderRadius: Radius.sm,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   anonymousRow: {
     flexDirection: 'row',

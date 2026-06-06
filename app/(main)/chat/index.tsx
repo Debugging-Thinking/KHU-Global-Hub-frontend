@@ -74,7 +74,7 @@ function ConversationItem({
         </View>
         <View style={styles.bottomRow}>
           <Text style={styles.lastMsg} numberOfLines={1}>
-            {item.lastMessage || "대화를 시작해보세요"}
+            {item.lastMessage || t.chatStartConvo}
           </Text>
           {item.unreadCount > 0 && (
             <View style={styles.unreadBadge}>
@@ -165,7 +165,7 @@ export default function ChatListScreen() {
     const match = matchHistory.find((m) => m.partner.memberId === partnerId);
     if (!match) return undefined;
     if (match.status === "ACTIVE" && match.semester === semester) {
-      return match.myRole === "MENTOR" ? "멘티" : "멘토";
+      return match.myRole === "MENTOR" ? t.mentee : t.mentor;
     }
     return undefined;
   };
@@ -199,7 +199,7 @@ export default function ChatListScreen() {
                 {index === 0 && mentoringPartnerIds.length > 0 && (
                   <View style={styles.sectionHeader}>
                     <Ionicons name="people-outline" size={14} color={Colors.primary} />
-                    <Text style={styles.sectionHeaderText}>이번 학기 멘토링</Text>
+                    <Text style={styles.sectionHeaderText}>{t.chatThisSemesterMentoring}</Text>
                   </View>
                 )}
                 {/* 일반 채팅 구분선 */}
@@ -207,7 +207,7 @@ export default function ChatListScreen() {
                   <View style={styles.sectionHeader}>
                     <Ionicons name="chatbubbles-outline" size={14} color={Colors.textTertiary} />
                     <Text style={[styles.sectionHeaderText, { color: Colors.textTertiary }]}>
-                      전체 채팅
+                      {t.chatAllChats}
                     </Text>
                   </View>
                 )}

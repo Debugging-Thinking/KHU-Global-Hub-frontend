@@ -16,7 +16,8 @@ import { Screen } from "@/src/components/layout/Screen";
 import { Card } from "@/src/components/ui/Card";
 import apiClient, { unwrap } from "@/src/api/client";
 import { useAuthStore } from "@/src/store/authStore";
-import { useT } from "@/src/i18n";
+import { useT, useLanguage } from "@/src/i18n";
+import { departmentLabel, countryLabel } from "@/src/data/labels";
 import { Colors, Radius, Shadow, Spacing, Typography } from "@/constants/theme";
 
 interface MatchInfo {
@@ -38,6 +39,7 @@ interface MatchInfo {
 export default function MentoringScreen() {
   const router = useRouter();
   const t = useT();
+  const lang = useLanguage();
   const profile = useAuthStore((s) => s.profile);
   const [match, setMatch] = useState<MatchInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -125,16 +127,16 @@ export default function MentoringScreen() {
               )}
               <View style={styles.partnerInfo}>
                 <Text style={styles.partnerName}>{match.partner.name}</Text>
-                <Text style={styles.partnerDetail}>{match.partner.department}</Text>
-                <Text style={styles.partnerDetail}>{match.partner.nationality}</Text>
+                <Text style={styles.partnerDetail}>{departmentLabel(match.partner.department, lang)}</Text>
+                <Text style={styles.partnerDetail}>{countryLabel(match.partner.nationality, lang)}</Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
             </TouchableOpacity>
 
             <Text style={styles.tapHint}>
               {profile?.mentoringRole === "MENTOR"
-                ? "멘티 프로필을 터치하면 메뉴가 열립니다"
-                : "멘토 프로필을 터치하면 메뉴가 열립니다"}
+                ? t.mentoringMenteeTouchHint
+                : t.mentoringMentorTouchHint}
             </Text>
           </Card>
 
@@ -179,8 +181,8 @@ export default function MentoringScreen() {
                     <Ionicons name="person-outline" size={20} color={Colors.primary} />
                   </View>
                   <View style={styles.menuTextGroup}>
-                    <Text style={styles.menuTitle}>프로필 정보</Text>
-                    <Text style={styles.menuDesc}>{match.partner.name}의 상세 프로필</Text>
+                    <Text style={styles.menuTitle}>{t.profileInfo}</Text>
+                    <Text style={styles.menuDesc}>{t.mentoringProfileInfoDesc(match.partner.name)}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
                 </TouchableOpacity>
@@ -197,8 +199,8 @@ export default function MentoringScreen() {
                     <Ionicons name="document-text-outline" size={20} color={Colors.accent} />
                   </View>
                   <View style={styles.menuTextGroup}>
-                    <Text style={styles.menuTitle}>멘토링 활동 기록</Text>
-                    <Text style={styles.menuDesc}>함께한 멘토링 히스토리</Text>
+                    <Text style={styles.menuTitle}>{t.mentoringActivityLog}</Text>
+                    <Text style={styles.menuDesc}>{t.mentoringActivityLogDesc}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
                 </TouchableOpacity>
@@ -215,8 +217,8 @@ export default function MentoringScreen() {
                     <Ionicons name="chatbubble-outline" size={20} color={Colors.success} />
                   </View>
                   <View style={styles.menuTextGroup}>
-                    <Text style={styles.menuTitle}>채팅으로 이동</Text>
-                    <Text style={styles.menuDesc}>{match.partner.name}에게 메시지 보내기</Text>
+                    <Text style={styles.menuTitle}>{t.mentoringGoToChat}</Text>
+                    <Text style={styles.menuDesc}>{t.mentoringGoToChatDesc(match.partner.name)}</Text>
                   </View>
                   <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
                 </TouchableOpacity>
@@ -226,7 +228,7 @@ export default function MentoringScreen() {
                   style={styles.closeButton}
                   onPress={() => setPopupVisible(false)}
                 >
-                  <Text style={styles.closeButtonText}>닫기</Text>
+                  <Text style={styles.closeButtonText}>{t.closeLabel}</Text>
                 </TouchableOpacity>
               </View>
             </Pressable>

@@ -16,8 +16,10 @@ import { Screen } from '@/src/components/layout/Screen';
 import { Card } from '@/src/components/ui/Card';
 import { boardApi } from '@/src/api/board';
 import { qnaApi } from '@/src/api/qna';
+import { translateApi } from '@/src/api/translate';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
+import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
 import type { PostSummary } from '@/src/types/board';
 import type { QnASummary } from '@/src/types/qna';
@@ -28,6 +30,9 @@ function CommunityScreen() {
   const router = useRouter();
   const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
+  const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  // 6개 외 언어 사용자: 피드는 원문(original=true) 표시 (번역은 상세에서 탭).
+  const prestored = isPrestoredMode(preferredCode);
 
   const TABS: { value: CommunityTab; label: string; icon: React.ComponentProps<typeof Ionicons>['name'] }[] = [
     { value: 'BOARD', label: t.boardFree, icon: 'chatbox-outline' },
@@ -41,10 +46,12 @@ function CommunityScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  // non-6 사용자: 피드 제목을 한 번에 배치 번역해 표시 (key: 'p'+postId / 'q'+qnaId)
+  const [tTitles, setTTitles] = useState<Record<string, string>>({});
 
   const fetchPosts = async (pageNum: number, refresh = false) => {
     try {
-      const res = await boardApi.getPosts(language as any, pageNum);
+      const res = await boardApi.getPosts(language as any, pageNum, 20, !prestored);
       if (refresh || pageNum === 0) setPosts(res.content);
       else setPosts((prev) => [...prev, ...res.content]);
       setHasMore(!res.last);
@@ -53,7 +60,7 @@ function CommunityScreen() {
 
   const fetchQnas = async () => {
     try {
-      const res = await qnaApi.getQnas(language as any);
+      const res = await qnaApi.getQnas(language as any, 0, 20, !prestored);
       setQnas(res.content);
     } catch {}
   };
@@ -65,14 +72,36 @@ function CommunityScreen() {
     } else {
       await fetchQnas();
     }
-  }, [activeTab, language]);
+  }, [activeTab, language, prestored]);
 
   useEffect(() => {
     setLoading(true);
     loadActive(true).finally(() => setLoading(false));
-  }, [activeTab, language]);
+  }, [activeTab, language, prestored]);
 
-  useFocusEffect(useCallback(() => { loadActive(true); }, [activeTab, language]));
+  useFocusEffect(useCallback(() => { loadActive(true); }, [activeTab, language, prestored]));
+
+  // non-6 사용자: 현재 탭 목록의 제목을 한 번의 호출로 번역(이미 번역된 항목은 건너뜀).
+  useEffect(() => {
+    if (prestored) return;
+    const items = activeTab === 'BOARD'
+      ? posts.map((p) => ({ key: 'p' + p.postId, title: p.title }))
+      : qnas.map((q) => ({ key: 'q' + q.qnaId, title: q.title }));
+    const missing = items.filter((it) => it.title?.trim() && !(it.key in tTitles));
+    if (missing.length === 0) return;
+    let cancelled = false;
+    translateApi.translate(missing.map((m) => m.title), preferredCode)
+      .then((res) => {
+        if (cancelled) return;
+        setTTitles((prev) => {
+          const next = { ...prev };
+          missing.forEach((m, i) => { next[m.key] = res.translations[i] ?? m.title; });
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [posts, qnas, activeTab, prestored, preferredCode, tTitles]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -140,7 +169,7 @@ function CommunityScreen() {
           data={posts}
           keyExtractor={(item) => String(item.postId)}
           renderItem={({ item }) => (
-            <PostCard post={item} onPress={() => router.push(`/(main)/board/${item.postId}`)} t={t} />
+            <PostCard post={item} onPress={() => router.push(`/(main)/board/${item.postId}`)} t={t} displayTitle={prestored ? undefined : tTitles['p' + item.postId]} />
           )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: Spacing[3] }} />}
@@ -162,7 +191,7 @@ function CommunityScreen() {
           data={qnas}
           keyExtractor={(item) => String(item.qnaId)}
           renderItem={({ item }) => (
-            <QnACard item={item} onPress={() => router.push(`/(main)/qna/${item.qnaId}`)} t={t} />
+            <QnACard item={item} onPress={() => router.push(`/(main)/qna/${item.qnaId}`)} t={t} displayTitle={prestored ? undefined : tTitles['q' + item.qnaId]} />
           )}
           contentContainerStyle={styles.list}
           ItemSeparatorComponent={() => <View style={{ height: Spacing[3] }} />}
@@ -181,10 +210,10 @@ function CommunityScreen() {
   );
 }
 
-function PostCard({ post, onPress, t }: { post: PostSummary; onPress: () => void; t: ReturnType<typeof useT> }) {
+function PostCard({ post, onPress, t, displayTitle }: { post: PostSummary; onPress: () => void; t: ReturnType<typeof useT>; displayTitle?: string }) {
   return (
     <Card onPress={onPress} style={styles.postCard}>
-      <Text style={styles.postTitle} numberOfLines={2}>{post.title}</Text>
+      <Text style={styles.postTitle} numberOfLines={2}>{displayTitle ?? post.title}</Text>
       <View style={styles.postMeta}>
         <Text style={styles.metaAuthor}>
           {post.isAnonymous ? t.anonymous : post.authorName ?? t.unknown}
@@ -206,11 +235,11 @@ function PostCard({ post, onPress, t }: { post: PostSummary; onPress: () => void
   );
 }
 
-function QnACard({ item, onPress, t }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT> }) {
+function QnACard({ item, onPress, t, displayTitle }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT>; displayTitle?: string }) {
   return (
     <Card onPress={onPress} style={styles.postCard}>
       <View style={styles.qnaTop}>
-        <Text style={[styles.postTitle, { flex: 1 }]} numberOfLines={2}>{item.title}</Text>
+        <Text style={[styles.postTitle, { flex: 1 }]} numberOfLines={2}>{displayTitle ?? item.title}</Text>
         {item.isAdopted && (
           <View style={styles.adoptedBadge}>
             <Ionicons name="checkmark" size={11} color={Colors.success} />

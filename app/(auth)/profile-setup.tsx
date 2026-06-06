@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -11,20 +11,14 @@ import {
 import { Screen } from '@/src/components/layout/Screen';
 import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
+import { SearchableSelect } from '@/src/components/ui/SearchableSelect';
 import { authApi, memberApi } from '@/src/api/auth';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
+import { bucketFromAzure } from '@/src/i18n/preferredLanguage';
+import { departmentOptions, countryOptions, languageOptions, languageDisplay } from '@/src/data/selectOptions';
 import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
-import type { Language, MentoringRole } from '@/src/types/auth';
-
-const LANGUAGES: { value: Language; label: string }[] = [
-  { value: 'KO', label: '한국어' },
-  { value: 'EN', label: 'English' },
-  { value: 'ZH', label: '中文' },
-  { value: 'VI', label: 'Tiếng Việt' },
-  { value: 'ES', label: 'Español' },
-  { value: 'MN', label: 'Монгол' },
-];
+import type { MentoringRole } from '@/src/types/auth';
 
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2015 + 1 }, (_, i) => CURRENT_YEAR - i);
@@ -37,13 +31,17 @@ export default function ProfileSetupScreen() {
   const [department, setDepartment] = useState('');
   const [nationality, setNationality] = useState('');
   const [admissionYear, setAdmissionYear] = useState<number>(CURRENT_YEAR);
-  const [language, setLanguage] = useState<Language>('KO');
+  const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Use the locally selected language so UI updates in real-time as user picks language
-  const t = useT(language);
+  // 선택한 선호 언어의 UI 버킷으로 실시간 미리보기 (6개 외 → EN)
+  const uiLang = bucketFromAzure(preferredLanguage);
+  const t = useT(uiLang);
+  const deptOpts = useMemo(() => departmentOptions(uiLang), [uiLang]);
+  const countryOpts = useMemo(() => countryOptions(uiLang), [uiLang]);
+  const langOpts = useMemo(() => languageOptions(), []);
   const isNewStudent = admissionYear === CURRENT_YEAR;
 
   const handleSubmit = async () => {
@@ -60,7 +58,8 @@ export default function ProfileSetupScreen() {
         department,
         nationality,
         admissionYear,
-        language,
+        language: uiLang,
+        preferredLanguage,
         mentoringRole: role,
       });
       const profile = await memberApi.getMe();
@@ -95,17 +94,25 @@ export default function ProfileSetupScreen() {
             value={name}
             onChangeText={setName}
           />
-          <Input
+          <SearchableSelect
             label={t.department}
-            placeholder={t.departmentPlaceholder}
+            placeholder={t.selectDepartment}
+            modalTitle={t.selectDepartment}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={deptOpts}
             value={department}
-            onChangeText={setDepartment}
+            onSelect={setDepartment}
           />
-          <Input
+          <SearchableSelect
             label={t.nationality}
-            placeholder={t.nationalityPlaceholder}
+            placeholder={t.selectNationality}
+            modalTitle={t.selectNationality}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={countryOpts}
             value={nationality}
-            onChangeText={setNationality}
+            onSelect={setNationality}
           />
 
           {/* Admission Year */}
@@ -148,22 +155,17 @@ export default function ProfileSetupScreen() {
           </View>
 
           {/* Preferred Language */}
-          <View>
-            <Text style={styles.sectionLabel}>{t.sectionPreferredLanguage}</Text>
-            <View style={styles.langGrid}>
-              {LANGUAGES.map((l) => (
-                <TouchableOpacity
-                  key={l.value}
-                  onPress={() => setLanguage(l.value)}
-                  style={[styles.langChip, language === l.value && styles.chipActive]}
-                >
-                  <Text style={[styles.chipText, language === l.value && styles.chipTextActive]}>
-                    {l.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
+          <SearchableSelect
+            label={t.sectionPreferredLanguage}
+            placeholder={t.selectLanguage}
+            modalTitle={t.selectLanguage}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={langOpts}
+            value={preferredLanguage}
+            displayValue={languageDisplay(preferredLanguage)}
+            onSelect={setPreferredLanguage}
+          />
 
           {error ? <Text style={styles.error}>{error}</Text> : null}
         </View>

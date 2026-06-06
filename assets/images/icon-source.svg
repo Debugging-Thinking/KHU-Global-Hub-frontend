@@ -1,0 +1,53 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B01030"/>
+      <stop offset="1" stop-color="#6E0A1E"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="512" cy="470" r="320" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- background -->
+  <rect width="1024" height="1024" rx="230" fill="url(#bg)"/>
+  <circle cx="512" cy="470" r="320" fill="url(#glow)"/>
+
+  <!-- globe -->
+  <g stroke="#FFFFFF" stroke-width="14" stroke-linecap="round" fill="none">
+    <circle cx="512" cy="488" r="232"/>
+    <!-- equator + parallels -->
+    <line x1="288" y1="488" x2="736" y2="488"/>
+    <path d="M312 392 Q512 350 712 392"/>
+    <path d="M312 584 Q512 626 712 584"/>
+    <!-- meridians -->
+    <ellipse cx="512" cy="488" rx="96" ry="232"/>
+    <line x1="512" y1="256" x2="512" y2="720"/>
+  </g>
+
+  <!-- hub connection nodes -->
+  <g fill="#FFD24A">
+    <circle cx="512" cy="488" r="30"/>
+  </g>
+  <g stroke="#FFD24A" stroke-width="10" stroke-linecap="round">
+    <line x1="512" y1="488" x2="316" y2="332"/>
+    <line x1="512" y1="488" x2="712" y2="320"/>
+    <line x1="512" y1="488" x2="708" y2="636"/>
+  </g>
+  <g fill="#FFFFFF" stroke="#B01030" stroke-width="8">
+    <circle cx="316" cy="332" r="34"/>
+    <circle cx="712" cy="320" r="34"/>
+    <circle cx="708" cy="636" r="34"/>
+  </g>
+
+  <!-- chat bubble accent (community) -->
+  <g>
+    <path d="M640 712 h150 a40 40 0 0 1 40 40 v70 a40 40 0 0 1 -40 40 h-92 l-44 40 v-40 h-14 a40 40 0 0 1 -40 -40 v-70 a40 40 0 0 1 40 -40 z" fill="#FFD24A"/>
+    <g fill="#B01030">
+      <circle cx="668" cy="787" r="13"/>
+      <circle cx="713" cy="787" r="13"/>
+      <circle cx="758" cy="787" r="13"/>
+    </g>
+  </g>
+</svg>

@@ -1,4 +1,4 @@
-export type Language = 'KO' | 'EN' | 'ZH' | 'VI' | 'ES' | 'MN';
+export type Language = 'KO' | 'EN' | 'ZH' | 'VI' | 'UZ' | 'MN';
 
 export interface PageResponse<T> {
   content: T[];
@@ -22,7 +22,12 @@ export interface QnASummary {
 export interface AnswerResponse {
   answerId: number;
   content: string;
+  originalContent: string;
+  originalLanguage: Language;
+  imageUrl: string | null;
   authorName: string;
+  authorId: number | null;   // 익명이면 null
+
   likeCount: number;
   isLiked: boolean;
   isOwner: boolean;
@@ -32,6 +37,10 @@ export interface AnswerResponse {
 
 export interface QnADetail extends QnASummary {
   content: string;
+  originalTitle: string;
+  originalContent: string;
+  imageUrl: string | null;
+  authorId: number | null;   // 익명이면 null
   isLiked: boolean;
   isOwner: boolean;
   answers: AnswerResponse[];
@@ -43,10 +52,12 @@ export interface CreateQnARequest {
   content: string;
   isAnonymous: boolean;
   language: Language;
+  imageUrl?: string | null;
 }
 
 export interface CreateAnswerRequest {
   content: string;
   isAnonymous: boolean;
   language: Language;
+  imageUrl?: string | null;
 }
