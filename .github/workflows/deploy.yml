@@ -1,0 +1,87 @@
+name: Deploy Frontend (Web + OTA)
+
+# main push 시: ① Expo Web 빌드 → EC2 Nginx 배포  ② EAS Update(OTA)로 앱 자동 갱신.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: true
+
+jobs:
+  # ─────────────────────────────────────────────────────────────
+  # ① 웹: Expo export → EC2 /var/www/html/globalhub
+  # ─────────────────────────────────────────────────────────────
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build web (운영 API URL 주입 + --clear 필수)
+        env:
+          # ⚠️ 포트 없이! (80포트 Nginx가 /api/ 프록시) — ARCHITECTURE §7 함정 참고
+          EXPO_PUBLIC_API_URL: ${{ secrets.EXPO_PUBLIC_API_URL }}
+        run: |
+          npx expo export --platform web --clear
+          # 검증: 운영 주소가 박혔고 localhost 폴백이 없는지
+          test -n "$(grep -rl "${EXPO_PUBLIC_API_URL#http://}" dist/_expo || true)" \
+            || (echo "❌ 운영 API URL이 번들에 없음 — EXPO_PUBLIC_API_URL secret 확인" && exit 1)
+          if grep -rl 'localhost:8080' dist/_expo; then
+            echo "❌ localhost:8080 폴백이 번들에 남아있음 — 빌드 중단"; exit 1
+          fi
+          echo "✅ web bundle ok"
+
+      - name: Copy dist to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: dist/
+          target: /home/${{ secrets.EC2_USER }}/web-staging
+          rm: true   # 기존 staging 비우고 새로
+
+      - name: Publish to Nginx root
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            sudo rm -rf /var/www/html/globalhub/*
+            sudo cp -r ~/web-staging/dist/* /var/www/html/globalhub/
+            echo "✅ web deployed"
+
+  # ─────────────────────────────────────────────────────────────
+  # ② OTA: 설치된 앱(preview 채널)에 JS 변경 무선 배포 — 재설치 불필요
+  #    (EXPO_TOKEN secret 없으면 이 job은 건너뜀)
+  # ─────────────────────────────────────────────────────────────
+  ota:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publish OTA update
+        run: |
+          eas update --branch preview \
+            --message "${{ github.event.head_commit.message || 'manual update' }}" \
+            --non-interactive
