@@ -8,6 +8,15 @@
     "scheme": "frontend",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "updates": {
+      "url": "https://u.expo.dev/587ac724-e39f-47ba-919e-cf71b612cb63",
+      "enabled": true,
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -15,7 +24,7 @@
       "package": "com.khu.globalhub",
       "usesCleartextTraffic": true,
       "adaptiveIcon": {
-        "backgroundColor": "#B01030",
+        "backgroundColor": "#C41230",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
