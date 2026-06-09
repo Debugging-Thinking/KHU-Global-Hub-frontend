@@ -32,9 +32,11 @@ type View = 'home' | 'quiz' | 'result';
 
 function QuizView({
   questions,
+  local,
   onFinish,
 }: {
   questions: QuizQuestion[];
+  local: boolean;
   onFinish: (response: QuizSubmitResponse) => void;
 }) {
   const lang = useLanguage();
@@ -65,6 +67,9 @@ function QuizView({
     if (index + 1 < total) {
       setIndex(index + 1);
       setSelected(null);
+    } else if (local) {
+      // 카테고리 퀴즈: 화면이 로컬 데이터라 채점도 로컬로 통일 (백엔드 문항과 ID/순서 불일치 방지)
+      onFinish(gradeLocally(newAnswers, lang));
     } else {
       setSubmitting(true);
       try {
@@ -368,7 +373,7 @@ export default function QuizScreen() {
   };
 
   if (view === 'quiz' && questions.length > 0)
-    return <QuizView questions={questions} onFinish={handleFinish} />;
+    return <QuizView questions={questions} local={!!category} onFinish={handleFinish} />;
   if (view === 'result' && result)
     return <ResultView response={result} questions={questions} category={category} categoryId={category ? categoryId : undefined} onRetry={() => { setResult(null); setView('home'); }} onHome={() => setView('home')} />;
 
