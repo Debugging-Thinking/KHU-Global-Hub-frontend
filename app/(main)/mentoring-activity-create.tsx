@@ -178,7 +178,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.divider,
   },
   contentInput: {
     fontSize: Typography.base,

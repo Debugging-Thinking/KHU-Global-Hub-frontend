@@ -1,11 +1,11 @@
 import React from 'react';
-import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Colors, Radius, Shadow, Spacing } from '../../../constants/theme';
 
 interface Props {
   children: React.ReactNode;
   onPress?: () => void;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   padding?: keyof typeof Spacing;
 }
 
