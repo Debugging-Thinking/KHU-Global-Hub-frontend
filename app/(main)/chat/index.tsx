@@ -14,6 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import { chatApi } from "@/src/api/chat";
+import { useAuthStore } from "@/src/store/authStore";
+import { AdminMemberSearchView } from "@/src/components/admin/AdminMemberSearchView";
 import apiClient, { unwrap } from "@/src/api/client";
 import { useT, timeAgo } from "@/src/i18n";
 import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
@@ -92,6 +94,7 @@ function ConversationItem({
 export default function ChatListScreen() {
   const router = useRouter();
   const t = useT();
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const { highlightPartnerId } = useLocalSearchParams<{ highlightPartnerId?: string }>();
 
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
@@ -169,6 +172,9 @@ export default function ChatListScreen() {
     }
     return undefined;
   };
+
+  // 관리자: DM 목록 대신 회원 검색 화면
+  if (isAdmin) return <AdminMemberSearchView />;
 
   return (
     <Screen padded={false}>

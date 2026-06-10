@@ -61,6 +61,7 @@ function AnswerCard({
   onDelete: (answerId: number) => void;
   onAuthorPress: (id: number) => void;
 }) {
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([answer.content], [answer.originalContent], answer.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
     <View style={[styles.answerCard, answer.isAdopted && styles.answerAdopted]}>
@@ -73,7 +74,7 @@ function AnswerCard({
       <View style={styles.answerHeader}>
         <AuthorName name={answer.authorName} authorId={answer.authorId} onPress={onAuthorPress} style={styles.answerAuthor} />
         <Text style={styles.answerTime}>{timeAgo(answer.createdAt, t)}</Text>
-        {answer.isOwner && (
+        {(answer.isOwner || isAdmin) && (
           <TouchableOpacity onPress={() => onDelete(answer.answerId)} style={{ marginLeft: 'auto' }}>
             <Ionicons name="trash-outline" size={14} color={Colors.textTertiary} />
           </TouchableOpacity>
@@ -115,6 +116,7 @@ export default function QnADetailScreen() {
   const { qnaId } = useLocalSearchParams<{ qnaId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const prestored = isPrestoredMode(preferredCode);
 
   const [qna, setQna] = useState<QnADetail | null>(null);
@@ -220,7 +222,7 @@ export default function QnADetailScreen() {
           <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} numberOfLines={1}>Q&A</Text>
-        {qna.isOwner ? (
+        {(qna.isOwner || isAdmin) ? (
           <TouchableOpacity onPress={handleDeleteQna}>
             <Ionicons name="trash-outline" size={22} color={Colors.error} />
           </TouchableOpacity>
@@ -287,42 +289,44 @@ export default function QnADetailScreen() {
         </View>
       </ScrollView>
 
-      {/* 답변 입력 */}
-      <View style={styles.inputBar}>
-        <View style={styles.inputTop}>
-          <TouchableOpacity
-            onPress={() => setAnswerAnonymous(v => !v)}
-            style={styles.anonymousToggle}
-          >
-            <Ionicons
-              name={answerAnonymous ? 'checkbox' : 'square-outline'}
-              size={16}
-              color={answerAnonymous ? Colors.primary : Colors.textTertiary}
+      {/* 답변 입력 (관리자는 작성 불가 — 숨김) */}
+      {!isAdmin && (
+        <View style={styles.inputBar}>
+          <View style={styles.inputTop}>
+            <TouchableOpacity
+              onPress={() => setAnswerAnonymous(v => !v)}
+              style={styles.anonymousToggle}
+            >
+              <Ionicons
+                name={answerAnonymous ? 'checkbox' : 'square-outline'}
+                size={16}
+                color={answerAnonymous ? Colors.primary : Colors.textTertiary}
+              />
+              <Text style={[styles.anonymousLabel, answerAnonymous && { color: Colors.primary }]}>
+                {t.anonymous}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.inputRow}>
+            <ImagePickerButton imageUrl={answerImage} onChange={setAnswerImage} />
+            <TextInput
+              style={styles.input}
+              placeholder={t.answerPlaceholder}
+              placeholderTextColor={Colors.textTertiary}
+              value={answerText}
+              onChangeText={setAnswerText}
+              multiline
             />
-            <Text style={[styles.anonymousLabel, answerAnonymous && { color: Colors.primary }]}>
-              {t.anonymous}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSubmitAnswer}
+              disabled={!answerText.trim() || submitting}
+              style={[styles.sendBtn, (!answerText.trim() || submitting) && styles.sendDisabled]}
+            >
+              <Ionicons name="send" size={18} color={Colors.textInverse} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.inputRow}>
-          <ImagePickerButton imageUrl={answerImage} onChange={setAnswerImage} />
-          <TextInput
-            style={styles.input}
-            placeholder={t.answerPlaceholder}
-            placeholderTextColor={Colors.textTertiary}
-            value={answerText}
-            onChangeText={setAnswerText}
-            multiline
-          />
-          <TouchableOpacity
-            onPress={handleSubmitAnswer}
-            disabled={!answerText.trim() || submitting}
-            style={[styles.sendBtn, (!answerText.trim() || submitting) && styles.sendDisabled]}
-          >
-            <Ionicons name="send" size={18} color={Colors.textInverse} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
     </Screen>
   );
 }

@@ -163,6 +163,7 @@ function ReviewCard({
   t: ReturnType<typeof useT>;
   onDelete: () => void;
 }) {
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   // 강의평 본문 = 게시판 방식: 6개 언어는 사전번역본/원문 토글, 그 외는 원문 + on-demand 번역.
   const tr = useItemTranslation([review.content], [review.originalContent], review.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
@@ -171,7 +172,7 @@ function ReviewCard({
         <StarRow value={review.rating} />
         <View style={styles.reviewHeadRight}>
           <Text style={styles.reviewDate}>{timeAgo(review.createdAt, t)}</Text>
-          {review.isMine ? (
+          {(review.isMine || isAdmin) ? (
             <TouchableOpacity onPress={onDelete} hitSlop={8}>
               <Ionicons name="trash-outline" size={15} color={Colors.textTertiary} />
             </TouchableOpacity>
@@ -200,6 +201,7 @@ export default function LectureDetailScreen() {
   const id = Number(lectureId);
   const viewerBucket = useLanguage();
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const prestored = isPrestoredMode(preferredCode);
 
   const [detail, setDetail] = useState<LectureDetail | null>(null);
@@ -337,8 +339,8 @@ export default function LectureDetailScreen() {
               </View>
             ) : null}
 
-            {/* 작성 버튼 / 폼 */}
-            {!writing ? (
+            {/* 작성 버튼 / 폼 (관리자는 작성 불가 — 숨김) */}
+            {isAdmin ? null : !writing ? (
               <TouchableOpacity style={styles.writeBtn} onPress={() => setWriting(true)} activeOpacity={0.85}>
                 <Ionicons name="create-outline" size={16} color={Colors.textInverse} />
                 <Text style={styles.writeBtnText}>{t.crWriteReview}</Text>

@@ -46,6 +46,8 @@ export interface AuthTokens {
 
 export interface AuthResponse extends AuthTokens {
   hasProfile: boolean;
+  /** 관리자 계정 여부 — 관리자 모드 진입 분기용. */
+  isAdmin?: boolean;
 }
 
 export interface Profile {
@@ -63,6 +65,8 @@ export interface Profile {
   profileImageUrl: string | null;
   /** 자기소개 (선택, 최대 500자). */
   bio?: string | null;
+  /** 관리자 계정 여부 — 관리자 모드 화면 분기용. */
+  isAdmin?: boolean;
 }
 
 export interface AuthState {

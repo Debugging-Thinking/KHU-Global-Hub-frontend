@@ -31,6 +31,7 @@ function CommunityScreen() {
   const t = useT();
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   // 6개 외 언어 사용자: 피드는 원문(original=true) 표시 (번역은 상세에서 탭).
   const prestored = isPrestoredMode(preferredCode);
 
@@ -133,10 +134,12 @@ function CommunityScreen() {
           </View>
           <Text style={styles.headerTitle}>{activeTab === 'BOARD' ? t.board : 'Q&A'}</Text>
         </View>
-        <TouchableOpacity onPress={goCreate} style={styles.writeBtn}>
-          <Ionicons name="pencil-outline" size={17} color={Colors.primary} />
-          <Text style={styles.writeBtnText}>{t.writePost}</Text>
-        </TouchableOpacity>
+        {!isAdmin && (
+          <TouchableOpacity onPress={goCreate} style={styles.writeBtn}>
+            <Ionicons name="pencil-outline" size={17} color={Colors.primary} />
+            <Text style={styles.writeBtnText}>{t.writePost}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* 자유게시판 | QnA 탭 */}

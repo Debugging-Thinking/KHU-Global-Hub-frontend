@@ -15,6 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "@/src/components/layout/Screen";
 import { Card } from "@/src/components/ui/Card";
 import apiClient, { unwrap } from "@/src/api/client";
+import { AdminMentoringView } from "@/src/components/admin/AdminMentoringView";
 import { useAuthStore } from "@/src/store/authStore";
 import { useT, useLanguage } from "@/src/i18n";
 import { departmentLabel, countryLabel } from "@/src/data/labels";
@@ -61,6 +62,9 @@ export default function MentoringScreen() {
 
   const partnerRoleLabel =
     profile?.mentoringRole === "MENTOR" ? t.mentee : t.mentor;
+
+  // 관리자: 내 매칭 대신 전체 매칭 관리 화면
+  if (profile?.isAdmin) return <AdminMentoringView />;
 
   return (
     <Screen scrollable padded>

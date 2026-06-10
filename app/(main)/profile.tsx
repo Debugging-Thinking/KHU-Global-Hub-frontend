@@ -42,6 +42,7 @@ import type { BadgeId, BadgeInfo } from '@/src/types/badge';
 
 const ROLE_COLORS: Record<string, string> = {
   MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
+  ADMIN: '#C41230',
 };
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2015 + 1 }, (_, i) => CURRENT_YEAR - i);
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
   const t = useT();
 
   const ROLE_LABELS: Record<string, string> = {
-    MENTOR: t.mentor, MENTEE: t.mentee, NONE: t.none,
+    MENTOR: t.mentor, MENTEE: t.mentee, NONE: t.none, ADMIN: '관리자',
   };
 
   const [isEditing, setIsEditing] = useState(false);
@@ -167,7 +168,8 @@ export default function ProfileScreen() {
 
   if (!profile) return null;
 
-  const roleColor = ROLE_COLORS[profile.mentoringRole] ?? Colors.textTertiary;
+  const displayRole = profile.isAdmin ? 'ADMIN' : profile.mentoringRole;
+  const roleColor = ROLE_COLORS[displayRole] ?? Colors.textTertiary;
   const isNewStudent = admissionYear === CURRENT_YEAR;
 
   return (
@@ -215,12 +217,12 @@ export default function ProfileScreen() {
         <Text style={styles.email}>{profile.email}</Text>
         <View style={[styles.roleBadge, { backgroundColor: roleColor + '22' }]}>
           <Ionicons
-            name={profile.mentoringRole === 'MENTOR' ? 'school' : 'person'}
+            name={profile.isAdmin ? 'shield-checkmark' : profile.mentoringRole === 'MENTOR' ? 'school' : 'person'}
             size={12}
             color={roleColor}
           />
           <Text style={[styles.roleText, { color: roleColor }]}>
-            {ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole}
+            {ROLE_LABELS[displayRole] ?? displayRole}
           </Text>
         </View>
       </View>
@@ -261,7 +263,7 @@ export default function ProfileScreen() {
           <View style={styles.divider} />
           <InfoRow icon="language-outline" label={t.languageLabel} value={languageDisplay(profile.preferredLanguage) ?? profile.language} />
           <View style={styles.divider} />
-          <InfoRow icon="people-outline" label={t.mentoringLabel} value={ROLE_LABELS[profile.mentoringRole] ?? profile.mentoringRole} />
+          <InfoRow icon="people-outline" label={t.mentoringLabel} value={ROLE_LABELS[displayRole] ?? displayRole} />
           <View style={styles.divider} />
           <InfoRow icon="person-circle-outline" label={t.bioLabel} value={profile.bio?.trim() ? profile.bio : t.noBio} />
         </Card>

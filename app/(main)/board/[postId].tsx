@@ -68,13 +68,14 @@ function ReplyItem({
   onAuthorPress: (id: number) => void;
 }) {
   const t = useT();
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
     <View style={styles.replyItem}>
       <View style={styles.commentHeader}>
         <AuthorName name={comment.authorName ?? t.anonymous} authorId={comment.authorId} onPress={onAuthorPress} style={styles.commentAuthor} />
         <Text style={styles.commentTime}>{timeAgo(comment.createdAt, t)}</Text>
-        {comment.isOwner && (
+        {(comment.isOwner || isAdmin) && (
           <TouchableOpacity onPress={() => onDelete(comment.commentId)} style={styles.deleteBtn}>
             <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
           </TouchableOpacity>
@@ -105,13 +106,14 @@ function CommentItem({
   onAuthorPress: (id: number) => void;
 }) {
   const t = useT();
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
     <View style={styles.commentItem}>
       <View style={styles.commentHeader}>
         <AuthorName name={comment.authorName ?? t.anonymous} authorId={comment.authorId} onPress={onAuthorPress} style={styles.commentAuthor} />
         <Text style={styles.commentTime}>{timeAgo(comment.createdAt, t)}</Text>
-        {comment.isOwner && (
+        {(comment.isOwner || isAdmin) && (
           <TouchableOpacity onPress={() => onDelete(comment.commentId)} style={styles.deleteBtn}>
             <Ionicons name="trash-outline" size={13} color={Colors.textTertiary} />
           </TouchableOpacity>
@@ -151,6 +153,7 @@ export default function PostDetailScreen() {
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   // 사전번역(6개) 모드: 원문/번역 재조회 토글. 그 외: 원문 + on-demand "번역하기".
   const prestored = isPrestoredMode(preferredCode);
 
@@ -272,11 +275,13 @@ export default function PostDetailScreen() {
         <Text style={styles.headerTitle} numberOfLines={1}>
           {post.title}
         </Text>
-        {post.isOwner ? (
+        {(post.isOwner || isAdmin) ? (
           <View style={{ flexDirection: 'row', gap: Spacing[3] }}>
-            <TouchableOpacity onPress={() => router.push(`/(main)/board/create?postId=${postId}`)}>
-              <Ionicons name="pencil-outline" size={21} color={Colors.primary} />
-            </TouchableOpacity>
+            {post.isOwner && (
+              <TouchableOpacity onPress={() => router.push(`/(main)/board/create?postId=${postId}`)}>
+                <Ionicons name="pencil-outline" size={21} color={Colors.primary} />
+              </TouchableOpacity>
+            )}
             <TouchableOpacity onPress={handleDeletePost}>
               <Ionicons name="trash-outline" size={21} color={Colors.error} />
             </TouchableOpacity>
@@ -360,42 +365,44 @@ export default function PostDetailScreen() {
         </View>
       </ScrollView>
 
-      {/* 댓글 입력 */}
-      <View style={styles.commentInput}>
-        <View style={styles.commentInputTop}>
-          <TouchableOpacity
-            onPress={() => setCommentAnonymous(v => !v)}
-            style={styles.anonymousToggle}
-          >
-            <Ionicons
-              name={commentAnonymous ? 'checkbox' : 'square-outline'}
-              size={16}
-              color={commentAnonymous ? Colors.primary : Colors.textTertiary}
+      {/* 댓글 입력 (관리자는 작성 불가 — 숨김) */}
+      {!isAdmin && (
+        <View style={styles.commentInput}>
+          <View style={styles.commentInputTop}>
+            <TouchableOpacity
+              onPress={() => setCommentAnonymous(v => !v)}
+              style={styles.anonymousToggle}
+            >
+              <Ionicons
+                name={commentAnonymous ? 'checkbox' : 'square-outline'}
+                size={16}
+                color={commentAnonymous ? Colors.primary : Colors.textTertiary}
+              />
+              <Text style={[styles.anonymousLabel, commentAnonymous && { color: Colors.primary }]}>
+                {t.anonymous}
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.commentInputRow}>
+            <ImagePickerButton imageUrl={commentImage} onChange={setCommentImage} />
+            <TextInput
+              style={styles.textInput}
+              placeholder={t.commentPlaceholder}
+              placeholderTextColor={Colors.textTertiary}
+              value={commentText}
+              onChangeText={setCommentText}
+              multiline
             />
-            <Text style={[styles.anonymousLabel, commentAnonymous && { color: Colors.primary }]}>
-              {t.anonymous}
-            </Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleComment}
+              disabled={!commentText.trim() || submitting}
+              style={[styles.sendBtn, (!commentText.trim() || submitting) && styles.sendBtnDisabled]}
+            >
+              <Ionicons name="send" size={18} color={Colors.textInverse} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.commentInputRow}>
-          <ImagePickerButton imageUrl={commentImage} onChange={setCommentImage} />
-          <TextInput
-            style={styles.textInput}
-            placeholder={t.commentPlaceholder}
-            placeholderTextColor={Colors.textTertiary}
-            value={commentText}
-            onChangeText={setCommentText}
-            multiline
-          />
-          <TouchableOpacity
-            onPress={handleComment}
-            disabled={!commentText.trim() || submitting}
-            style={[styles.sendBtn, (!commentText.trim() || submitting) && styles.sendBtnDisabled]}
-          >
-            <Ionicons name="send" size={18} color={Colors.textInverse} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      )}
     </Screen>
   );
 }
