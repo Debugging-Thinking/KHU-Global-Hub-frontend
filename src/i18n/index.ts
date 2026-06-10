@@ -31,11 +31,22 @@ export function badgeName(t: T, id: string): string {
 }
 
 /**
+ * 백엔드 LocalDateTime(타임존 표식 없는 UTC 시각)을 UTC로 명시 파싱한다.
+ * 서버 JVM이 UTC라 createdAt은 "2026-06-10T05:01:24"처럼 Z 없이 직렬화되는데,
+ * new Date()는 이를 브라우저 로컬(KST)로 해석해 9시간 어긋난다. → Z를 붙여 UTC로 고정.
+ * 이미 타임존(Z 또는 ±hh:mm)이 있는 문자열은 그대로 둔다.
+ */
+export function parseServerDate(dateStr: string): Date {
+  const hasTz = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(dateStr);
+  return new Date(hasTz ? dateStr : dateStr + 'Z');
+}
+
+/**
  * 날짜 문자열을 "N분 전" 형식으로 변환.
  * short=true이면 "N분" 형식 (채팅 목록용).
  */
 export function timeAgo(dateStr: string, t: T, short = false): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const diff = Date.now() - parseServerDate(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
   if (mins < 1) return short ? t.justNowShort : t.justNow;
   if (mins < 60) return short ? t.minsAgoShort(mins) : t.minsAgo(mins);
