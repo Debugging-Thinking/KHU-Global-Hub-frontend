@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -13,6 +13,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
+import { adminApi } from "@/src/api/admin";
+import { useAuthStore } from "@/src/store/authStore";
 import { useLanguage, useT } from "@/src/i18n";
 import { departmentLabel, countryLabel } from "@/src/data/labels";
 import { languageDisplay } from "@/src/data/selectOptions";
@@ -29,6 +31,8 @@ interface PartnerProfile {
   mentoringRole: string;
   admissionYear: number;
   bio: string | null;
+  /** 계정 활성 여부 (false = 정지됨). 관리자 정지 토글용. */
+  isActive?: boolean;
 }
 
 const LANGUAGE_LABEL: Record<string, string> = {
@@ -46,18 +50,67 @@ export default function MentorProfileScreen() {
   const lang = useLanguage();
   const t = useT();
   const roleText = (r: string) => (r === "MENTOR" ? t.mentor : r === "MENTEE" ? t.mentee : t.none);
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const [profile, setProfile] = useState<PartnerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [toggling, setToggling] = useState(false);
+
+  // showSpinner=true: 최초 진입(전체 화면 로딩) · false: 정지 토글 후 조용한 재조회
+  const load = useCallback(
+    (showSpinner: boolean) => {
+      if (!memberId) return;
+      if (showSpinner) setLoading(true);
+      apiClient
+        .get(`/members/${memberId}`)
+        .then((r) => {
+          setProfile(unwrap(r));
+          setError(false);
+        })
+        .catch(() => {
+          if (showSpinner) setError(true);
+        })
+        .finally(() => {
+          if (showSpinner) setLoading(false);
+        });
+    },
+    [memberId]
+  );
 
   useEffect(() => {
-    if (!memberId) return;
-    apiClient
-      .get(`/members/${memberId}`)
-      .then((r) => setProfile(unwrap(r)))
-      .catch(() => setError(true))
-      .finally(() => setLoading(false));
-  }, [memberId]);
+    load(true);
+  }, [load]);
+
+  const suspended = profile?.isActive === false;
+
+  // 관리자: 대상 회원 활동 정지/해제 토글 후 프로필 재조회
+  const onToggleSuspend = async () => {
+    if (!profile) return;
+    setToggling(true);
+    try {
+      if (suspended) await adminApi.activate(profile.memberId);
+      else await adminApi.suspend(profile.memberId);
+      load(false);
+    } catch {
+      // 실패 시 상태 유지
+    } finally {
+      setToggling(false);
+    }
+  };
+
+  // 관리자: 대상 회원 멘토링 역할 직접 변경(시연 노출 X, 운영 편의용)
+  const onChangeRole = async (role: "MENTOR" | "MENTEE") => {
+    if (!profile || profile.mentoringRole === role) return;
+    setToggling(true);
+    try {
+      await adminApi.updateRole(profile.memberId, role);
+      load(false);
+    } catch {
+      // 실패 시 상태 유지
+    } finally {
+      setToggling(false);
+    }
+  };
 
   const roleColor =
     profile?.mentoringRole === "MENTOR" ? Colors.accent : Colors.primary;
@@ -105,6 +158,12 @@ export default function MentorProfileScreen() {
                 {roleText(profile.mentoringRole)}
               </Text>
             </View>
+            {suspended && (
+              <View style={styles.suspendedBadge}>
+                <Ionicons name="ban" size={14} color={Colors.error} />
+                <Text style={styles.suspendedText}>정지됨</Text>
+              </View>
+            )}
           </View>
 
           {/* 상세 정보 카드 */}
@@ -163,15 +222,58 @@ export default function MentorProfileScreen() {
 
           </View>
 
-          {/* 1:1 채팅하기 — 대화 시작 전엔 방이 생기지 않고, 메시지를 보내면 기록에 남음 */}
-          <TouchableOpacity
-            style={styles.chatBtn}
-            onPress={() => router.push(`/(main)/chat/${profile.memberId}`)}
-            activeOpacity={0.85}
-          >
-            <Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.textInverse} />
-            <Text style={styles.chatBtnText}>{t.mentoringGoToChat}</Text>
-          </TouchableOpacity>
+          {isAdmin ? (
+            /* 관리자: 채팅 대신 활동 정지/해제 토글 */
+            <TouchableOpacity
+              style={[styles.chatBtn, suspended ? styles.activateBtn : styles.suspendBtn]}
+              onPress={onToggleSuspend}
+              disabled={toggling}
+              activeOpacity={0.85}
+            >
+              {toggling ? (
+                <ActivityIndicator color={Colors.textInverse} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={suspended ? "checkmark-circle-outline" : "ban-outline"}
+                    size={18}
+                    color={Colors.textInverse}
+                  />
+                  <Text style={styles.chatBtnText}>{suspended ? "정지 해제" : "활동 정지하기"}</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          ) : (
+            /* 1:1 채팅하기 — 대화 시작 전엔 방이 생기지 않고, 메시지를 보내면 기록에 남음 */
+            <TouchableOpacity
+              style={styles.chatBtn}
+              onPress={() => router.push(`/(main)/chat/${profile.memberId}`)}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.textInverse} />
+              <Text style={styles.chatBtnText}>{t.mentoringGoToChat}</Text>
+            </TouchableOpacity>
+          )}
+
+          {isAdmin && profile && (
+            <View style={styles.roleSwitch}>
+              <Text style={styles.roleSwitchLabel}>역할 변경 (관리자용)</Text>
+              <View style={styles.roleSwitchRow}>
+                {(["MENTOR", "MENTEE"] as const).map((r) => (
+                  <TouchableOpacity
+                    key={r}
+                    style={[styles.roleOpt, profile.mentoringRole === r && styles.roleOptActive]}
+                    onPress={() => onChangeRole(r)}
+                    disabled={toggling}
+                  >
+                    <Text style={[styles.roleOptText, profile.mentoringRole === r && styles.roleOptTextActive]}>
+                      {r === "MENTOR" ? "멘토" : "멘티"}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
         </ScrollView>
       )}
     </Screen>
@@ -209,6 +311,29 @@ const styles = StyleSheet.create({
     fontSize: Typography.base,
     fontWeight: Typography.semibold,
     color: Colors.textInverse,
+  },
+  suspendBtn: { backgroundColor: Colors.error },
+  roleSwitch: { marginTop: 12, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: "#E5E7EB" },
+  roleSwitchLabel: { fontSize: 12, color: Colors.textTertiary, marginBottom: 8 },
+  roleSwitchRow: { flexDirection: "row", gap: 8 },
+  roleOpt: { flex: 1, alignItems: "center", paddingVertical: 10, borderRadius: 8, backgroundColor: Colors.surface, borderWidth: 1, borderColor: "#E5E7EB" },
+  roleOptActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  roleOptText: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
+  roleOptTextActive: { color: Colors.textInverse },
+  activateBtn: { backgroundColor: Colors.success },
+  suspendedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[1],
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[1],
+    borderRadius: Radius.full,
+    backgroundColor: Colors.errorLight,
+  },
+  suspendedText: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+    color: Colors.error,
   },
   headerTitle: {
     fontSize: Typography.lg,

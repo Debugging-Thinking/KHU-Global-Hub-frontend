@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -10,36 +10,43 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { Screen } from "@/src/components/layout/Screen";
 import { adminApi, type MemberSearchResult } from "@/src/api/admin";
 import { Colors } from "@/constants/theme";
 
 /**
- * 관리자 채팅 탭 대체 화면 — 가입 회원을 이름으로 검색해 조회.
+ * 관리자 채팅 탭 대체 화면 — 가입 회원 목록을 표시(진입 시 전체)하고
+ * 이름으로 필터 검색. 행을 누르면 타인 프로필(정지 토글 포함)로 이동.
  */
 export function AdminMemberSearchView() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MemberSearchResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const search = async () => {
-    if (!query.trim()) return;
+  // 진입 시 전체 회원 목록을 먼저 로드 (name='' → 전체)
+  const load = useCallback(async (name: string) => {
     setLoading(true);
-    setSearched(true);
     try {
-      setResults(await adminApi.searchMembers(query.trim()));
+      setResults(await adminApi.searchMembers(name.trim()));
     } catch {
       setResults([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    load("");
+  }, [load]);
+
+  const search = () => load(query);
 
   return (
     <Screen padded>
-      <Text style={styles.title}>회원 검색</Text>
+      <Text style={styles.title}>회원 관리</Text>
       <View style={styles.searchRow}>
         <TextInput
           style={styles.input}
@@ -62,11 +69,13 @@ export function AdminMemberSearchView() {
           data={results}
           keyExtractor={(m) => String(m.memberId)}
           contentContainerStyle={{ paddingTop: 12 }}
-          ListEmptyComponent={
-            searched ? <Text style={styles.empty}>검색 결과가 없습니다.</Text> : null
-          }
+          ListEmptyComponent={<Text style={styles.empty}>회원이 없습니다.</Text>}
           renderItem={({ item }) => (
-            <View style={styles.row}>
+            <TouchableOpacity
+              style={styles.row}
+              activeOpacity={0.7}
+              onPress={() => router.push(`/(main)/mentor-profile?memberId=${item.memberId}`)}
+            >
               {item.profileImageUrl ? (
                 <Image source={{ uri: item.profileImageUrl }} style={styles.avatar} />
               ) : (
@@ -78,7 +87,8 @@ export function AdminMemberSearchView() {
                 <Text style={styles.name}>{item.name}</Text>
                 <Text style={styles.dept}>{item.department}</Text>
               </View>
-            </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textTertiary} />
+            </TouchableOpacity>
           )}
         />
       )}

@@ -4,6 +4,7 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Colors, Shadow } from "@/constants/theme";
 import { useT } from "@/src/i18n";
+import { useAuthStore } from "@/src/store/authStore";
 
 type IoniconName = React.ComponentProps<typeof Ionicons>["name"];
 
@@ -13,6 +14,7 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 
 export default function MainLayout() {
   const t = useT();
+  const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
 
   return (
     <Tabs
@@ -46,9 +48,14 @@ export default function MainLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          title: t.tabChat,
+          // 관리자는 채팅 탭이 회원 관리(멤버) 화면으로 동작 — 사람 1명 아이콘으로 멘토링(2명)과 구분
+          title: isAdmin ? "멤버" : t.tabChat,
           tabBarIcon: ({ color, size }) => (
-            <TabIcon name="chatbubbles-outline" color={color} size={size} />
+            <TabIcon
+              name={isAdmin ? "person-outline" : "chatbubbles-outline"}
+              color={color}
+              size={size}
+            />
           ),
         }}
       />

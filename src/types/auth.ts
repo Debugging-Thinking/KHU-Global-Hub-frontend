@@ -67,6 +67,8 @@ export interface Profile {
   bio?: string | null;
   /** 관리자 계정 여부 — 관리자 모드 화면 분기용. */
   isAdmin?: boolean;
+  /** 계정 활성 여부 (false = 정지됨). 관리자 정지 토글용. */
+  isActive?: boolean;
 }
 
 export interface AuthState {
