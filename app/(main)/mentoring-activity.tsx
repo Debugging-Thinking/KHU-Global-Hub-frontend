@@ -3,6 +3,8 @@ import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,6 +23,7 @@ interface ActivityItem {
   authorId: number;
   title: string;
   content: string;
+  imageUrls: string[];
   createdAt: string;
 }
 
@@ -93,12 +96,29 @@ export default function MentoringActivityScreen() {
                 <View style={styles.timelineDot} />
                 {index < activities.length - 1 && <View style={styles.timelineLine} />}
               </View>
+
               <View style={styles.cardContent}>
                 <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
                 <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardBody} numberOfLines={3}>
-                  {item.content}
-                </Text>
+                <Text style={styles.cardBody}>{item.content}</Text>
+
+                {/* 첨부 이미지 */}
+                {item.imageUrls && item.imageUrls.length > 0 && (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.imageRow}
+                  >
+                    {item.imageUrls.map((uri, i) => (
+                      <Image
+                        key={i}
+                        source={{ uri }}
+                        style={styles.activityImage}
+                        resizeMode="cover"
+                      />
+                    ))}
+                  </ScrollView>
+                )}
               </View>
             </View>
           )}
@@ -109,102 +129,23 @@ export default function MentoringActivityScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: Spacing[4],
-    paddingVertical: Spacing[3],
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-    backgroundColor: Colors.background,
-  },
-  backBtn: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: Typography.lg,
-    fontWeight: Typography.bold,
-    color: Colors.textPrimary,
-  },
-  writeBtn: {
-    paddingHorizontal: Spacing[3],
-    paddingVertical: Spacing[2],
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-  },
-  writeBtnText: {
-    fontSize: Typography.sm,
-    fontWeight: Typography.bold,
-    color: "#fff",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: Spacing[2],
-  },
-  emptyText: {
-    fontSize: Typography.base,
-    fontWeight: Typography.semibold,
-    color: Colors.textSecondary,
-  },
-  emptyDesc: {
-    fontSize: Typography.sm,
-    color: Colors.textTertiary,
-  },
-  list: {
-    padding: Spacing[5],
-    gap: Spacing[1],
-  },
-  card: {
-    flexDirection: "row",
-    gap: Spacing[3],
-    paddingBottom: Spacing[5],
-  },
-  timelineCol: {
-    alignItems: "center",
-    width: 20,
-    paddingTop: 4,
-  },
-  timelineDot: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: Colors.primary,
-    borderWidth: 2,
-    borderColor: Colors.primaryLight,
-  },
-  timelineLine: {
-    flex: 1,
-    width: 2,
-    backgroundColor: Colors.primaryLight,
-    marginTop: 4,
-  },
-  cardContent: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.lg,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    padding: Spacing[4],
-    gap: Spacing[2],
-  },
-  cardDate: {
-    fontSize: Typography.xs,
-    color: Colors.textTertiary,
-  },
-  cardTitle: {
-    fontSize: Typography.base,
-    fontWeight: Typography.bold,
-    color: Colors.textPrimary,
-  },
-  cardBody: {
-    fontSize: Typography.sm,
-    color: Colors.textSecondary,
-    lineHeight: Typography.sm * 1.6,
-  },
+  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[4], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.background },
+  backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
+  headerTitle: { fontSize: Typography.lg, fontWeight: Typography.bold, color: Colors.textPrimary },
+  writeBtn: { paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], backgroundColor: Colors.primary, borderRadius: Radius.md },
+  writeBtnText: { fontSize: Typography.sm, fontWeight: Typography.bold, color: "#fff" },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: Spacing[2] },
+  emptyText: { fontSize: Typography.base, fontWeight: Typography.semibold, color: Colors.textSecondary },
+  emptyDesc: { fontSize: Typography.sm, color: Colors.textTertiary },
+  list: { padding: Spacing[5], gap: Spacing[1] },
+  card: { flexDirection: "row", gap: Spacing[3], paddingBottom: Spacing[5] },
+  timelineCol: { alignItems: "center", width: 20, paddingTop: 4 },
+  timelineDot: { width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.primary, borderWidth: 2, borderColor: Colors.primaryLight },
+  timelineLine: { flex: 1, width: 2, backgroundColor: Colors.primaryLight, marginTop: 4 },
+  cardContent: { flex: 1, backgroundColor: Colors.background, borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.border, padding: Spacing[4], gap: Spacing[2] },
+  cardDate: { fontSize: Typography.xs, color: Colors.textTertiary },
+  cardTitle: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.textPrimary },
+  cardBody: { fontSize: Typography.sm, color: Colors.textSecondary, lineHeight: Typography.sm * 1.6 },
+  imageRow: { marginTop: Spacing[2] },
+  activityImage: { width: 120, height: 120, borderRadius: Radius.md, marginRight: Spacing[2] },
 });
