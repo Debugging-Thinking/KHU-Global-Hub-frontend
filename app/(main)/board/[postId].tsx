@@ -122,14 +122,25 @@ function CommentItem({
       <Text style={styles.commentContent}>{tr.displays[0]}</Text>
       {comment.imageUrl ? <Attachment url={comment.imageUrl} imageStyle={styles.commentImage} /> : null}
       <View style={styles.commentActions}>
-        <TouchableOpacity onPress={() => onLike(comment.commentId)} style={styles.commentLike}>
-          <Ionicons
-            name={comment.isLiked ? 'heart' : 'heart-outline'}
-            size={13}
-            color={comment.isLiked ? Colors.error : Colors.textTertiary}
-          />
-          <Text style={styles.commentLikeText}>{comment.likeCount}</Text>
-        </TouchableOpacity>
+        {isAdmin ? (
+          <View style={styles.commentLike}>
+            <Ionicons
+              name={comment.isLiked ? 'heart' : 'heart-outline'}
+              size={13}
+              color={comment.isLiked ? Colors.error : Colors.textTertiary}
+            />
+            <Text style={styles.commentLikeText}>{comment.likeCount}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => onLike(comment.commentId)} style={styles.commentLike}>
+            <Ionicons
+              name={comment.isLiked ? 'heart' : 'heart-outline'}
+              size={13}
+              color={comment.isLiked ? Colors.error : Colors.textTertiary}
+            />
+            <Text style={styles.commentLikeText}>{comment.likeCount}</Text>
+          </TouchableOpacity>
+        )}
         <ItemToggle tr={tr} />
       </View>
       {comment.children.map((child) => (
@@ -331,14 +342,25 @@ export default function PostDetailScreen() {
           )}
 
           <View style={styles.postActions}>
-            <TouchableOpacity onPress={handleLike} style={styles.action}>
-              <Ionicons
-                name={liked ? 'heart' : 'heart-outline'}
-                size={20}
-                color={liked ? Colors.error : Colors.textTertiary}
-              />
-              <Text style={styles.actionText}>{likeCount}</Text>
-            </TouchableOpacity>
+            {isAdmin ? (
+              <View style={styles.action}>
+                <Ionicons
+                  name={liked ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={liked ? Colors.error : Colors.textTertiary}
+                />
+                <Text style={styles.actionText}>{likeCount}</Text>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={handleLike} style={styles.action}>
+                <Ionicons
+                  name={liked ? 'heart' : 'heart-outline'}
+                  size={20}
+                  color={liked ? Colors.error : Colors.textTertiary}
+                />
+                <Text style={styles.actionText}>{likeCount}</Text>
+              </TouchableOpacity>
+            )}
             <View style={styles.action}>
               <Ionicons name="chatbubble-outline" size={20} color={Colors.textTertiary} />
               <Text style={styles.actionText}>{post.commentCount}</Text>

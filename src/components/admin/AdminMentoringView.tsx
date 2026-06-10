@@ -15,6 +15,9 @@ import { Card } from "@/src/components/ui/Card";
 import { adminApi, type AdminMatch, type MentoringQueue, type QueueMember } from "@/src/api/admin";
 import { Colors } from "@/constants/theme";
 
+const MENTOR_COLOR = "#0D9488"; // 멘토 = 틸 청록 (멘티 빨강의 보색 — 대비 선명 + 차분)
+const MENTEE_COLOR = Colors.primary; // 멘티 = 경희 레드
+
 function currentSemester() {
   const now = new Date();
   return `${now.getFullYear()}-${now.getMonth() < 6 ? "1" : "2"}`;
@@ -22,7 +25,7 @@ function currentSemester() {
 
 /**
  * 관리자 멘토링 화면 — 학기별 매칭 현황 + 전역 대기열에서 멤버를 선택해 그 학기로 매칭.
- * 매칭은 선택된 멤버 부분집합에만 그리디 알고리즘 적용(자동 승격 포함, 백엔드 처리).
+ * 대기열은 입학년도로 좌우 분리: 입학 1년+ = 멘토(매칭 시 자동승격), 올해 신입생 = 멘티.
  */
 export function AdminMentoringView() {
   const [matches, setMatches] = useState<AdminMatch[]>([]);
@@ -55,14 +58,24 @@ export function AdminMentoringView() {
     load();
   }, [load]);
 
-  // 학기 목록 = 매칭 이력 + 현재 학기 + 직접 추가, 중복 제거 후 최신순
   const semesters = useMemo(() => {
     const set = new Set<string>([currentSemester(), semester, ...matches.map((x) => x.semester), ...extraSemesters]);
     return Array.from(set).sort().reverse();
   }, [matches, extraSemesters, semester]);
 
   const semesterMatches = matches.filter((m) => m.semester === semester);
-  const allQueue = [...queue.waitingMentors, ...queue.waitingMentees];
+
+  // 입학년도 기준 좌우 분리 — 입학 1년+ = 멘토(매칭 시 자동승격), 올해 신입생 = 멘티
+  const { mentorCol, menteeCol, allQueue } = useMemo(() => {
+    const all = [...queue.waitingMentors, ...queue.waitingMentees];
+    const yr = new Date().getFullYear();
+    return {
+      allQueue: all,
+      mentorCol: all.filter((m) => m.admissionYear < yr),
+      menteeCol: all.filter((m) => m.admissionYear >= yr),
+    };
+  }, [queue]);
+
   const allSelected = allQueue.length > 0 && allQueue.every((m) => selected.has(m.memberId));
 
   const toggle = (id: number) =>
@@ -165,7 +178,7 @@ export function AdminMentoringView() {
             ))
           )}
 
-          {/* 대기열 */}
+          {/* 대기열 — 좌(멘토) / 우(멘티) */}
           <View style={styles.queueHeader}>
             <Text style={styles.section}>매칭 대기열 ({allQueue.length})</Text>
             {allQueue.length > 0 && (
@@ -177,10 +190,10 @@ export function AdminMentoringView() {
           {allQueue.length === 0 ? (
             <Text style={styles.empty}>대기 중인 멤버가 없습니다.</Text>
           ) : (
-            <>
-              <QueueGroup label="멘토" members={queue.waitingMentors} selected={selected} onToggle={toggle} />
-              <QueueGroup label="멘티" members={queue.waitingMentees} selected={selected} onToggle={toggle} />
-            </>
+            <View style={styles.cols}>
+              <QueueCol title="멘토" hint="입학 1년+" color={MENTOR_COLOR} members={mentorCol} selected={selected} onToggle={toggle} />
+              <QueueCol title="멘티" hint="신입생" color={MENTEE_COLOR} members={menteeCol} selected={selected} onToggle={toggle} />
+            </View>
           )}
         </>
       )}
@@ -193,7 +206,7 @@ export function AdminMentoringView() {
         disabled={running || selected.size === 0}
         activeOpacity={0.85}
       >
-        <Ionicons name="git-merge-outline" size={18} color={Colors.textInverse} />
+        <Ionicons name="link-outline" size={18} color={Colors.textInverse} />
         <Text style={styles.runBtnText}>
           {running ? "매칭 실행 중..." : `${semester}로 ${selected.size}명 매칭 실행`}
         </Text>
@@ -202,33 +215,43 @@ export function AdminMentoringView() {
   );
 }
 
-function QueueGroup({
-  label,
+function QueueCol({
+  title,
+  hint,
+  color,
   members,
   selected,
   onToggle,
 }: {
-  label: string;
+  title: string;
+  hint: string;
+  color: string;
   members: QueueMember[];
   selected: Set<number>;
   onToggle: (id: number) => void;
 }) {
-  if (members.length === 0) return null;
   return (
-    <View style={{ marginBottom: 8 }}>
-      <Text style={styles.groupLabel}>{label} ({members.length})</Text>
-      {members.map((m) => {
-        const on = selected.has(m.memberId);
-        return (
-          <TouchableOpacity key={m.memberId} style={styles.qRow} onPress={() => onToggle(m.memberId)} activeOpacity={0.7}>
-            <Ionicons name={on ? "checkbox" : "square-outline"} size={20} color={on ? Colors.primary : Colors.textTertiary} />
-            <View style={{ flex: 1 }}>
-              <Text style={styles.qName}>{m.name}</Text>
-              <Text style={styles.qMeta}>{m.department} · {m.nationality} · {m.admissionYear}학번</Text>
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+    <View style={styles.col}>
+      <View style={[styles.colHead, { borderColor: color }]}>
+        <Text style={[styles.colTitle, { color }]}>{title}</Text>
+        <Text style={styles.colHint}>{hint} · {members.length}</Text>
+      </View>
+      {members.length === 0 ? (
+        <Text style={styles.colEmpty}>없음</Text>
+      ) : (
+        members.map((m) => {
+          const on = selected.has(m.memberId);
+          return (
+            <TouchableOpacity key={m.memberId} style={styles.qCard} onPress={() => onToggle(m.memberId)} activeOpacity={0.7}>
+              <Ionicons name={on ? "checkbox" : "square-outline"} size={18} color={on ? color : Colors.textTertiary} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.qName} numberOfLines={1}>{m.name}</Text>
+                <Text style={styles.qMeta} numberOfLines={1}>{m.admissionYear} · {m.nationality}</Text>
+              </View>
+            </TouchableOpacity>
+          );
+        })
+      )}
     </View>
   );
 }
@@ -248,15 +271,20 @@ const styles = StyleSheet.create({
   empty: { color: Colors.textTertiary, fontSize: 13, marginBottom: 8 },
   matchCard: { padding: 12, marginBottom: 8 },
   pair: { fontSize: 14, color: Colors.textPrimary },
-  mentor: { fontWeight: "700", color: Colors.accent },
-  mentee: { fontWeight: "700", color: Colors.primary },
+  mentor: { fontWeight: "700", color: MENTOR_COLOR },
+  mentee: { fontWeight: "700", color: MENTEE_COLOR },
   meta: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
   queueHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   selectAll: { fontSize: 13, color: Colors.primary, fontWeight: "600" },
-  groupLabel: { fontSize: 13, fontWeight: "700", color: Colors.textTertiary, marginBottom: 4, marginTop: 4 },
-  qRow: { flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
-  qName: { fontSize: 14, fontWeight: "600", color: Colors.textPrimary },
-  qMeta: { fontSize: 12, color: Colors.textTertiary, marginTop: 1 },
+  cols: { flexDirection: "row", gap: 10 },
+  col: { flex: 1 },
+  colHead: { borderBottomWidth: 2, paddingBottom: 4, marginBottom: 6 },
+  colTitle: { fontSize: 14, fontWeight: "700" },
+  colHint: { fontSize: 11, color: Colors.textTertiary },
+  colEmpty: { fontSize: 12, color: Colors.textTertiary, paddingVertical: 8 },
+  qCard: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  qName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
+  qMeta: { fontSize: 11, color: Colors.textTertiary, marginTop: 1 },
   msg: { marginTop: 12, color: Colors.textPrimary, textAlign: "center" },
   runBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, backgroundColor: Colors.primary, paddingVertical: 14, borderRadius: 12, marginTop: 16 },
   runBtnDisabled: { opacity: 0.5 },

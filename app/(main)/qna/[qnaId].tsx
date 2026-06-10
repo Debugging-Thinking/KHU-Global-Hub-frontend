@@ -83,14 +83,25 @@ function AnswerCard({
       <Text style={styles.answerContent}>{tr.displays[0]}</Text>
       {answer.imageUrl ? <Attachment url={answer.imageUrl} imageStyle={styles.qnaImage} /> : null}
       <View style={styles.answerActions}>
-        <TouchableOpacity onPress={() => onLike(answer.answerId)} style={styles.likeBtn}>
-          <Ionicons
-            name={answer.isLiked ? 'heart' : 'heart-outline'}
-            size={14}
-            color={answer.isLiked ? Colors.error : Colors.textTertiary}
-          />
-          <Text style={styles.likeText}>{answer.likeCount}</Text>
-        </TouchableOpacity>
+        {isAdmin ? (
+          <View style={styles.likeBtn}>
+            <Ionicons
+              name={answer.isLiked ? 'heart' : 'heart-outline'}
+              size={14}
+              color={answer.isLiked ? Colors.error : Colors.textTertiary}
+            />
+            <Text style={styles.likeText}>{answer.likeCount}</Text>
+          </View>
+        ) : (
+          <TouchableOpacity onPress={() => onLike(answer.answerId)} style={styles.likeBtn}>
+            <Ionicons
+              name={answer.isLiked ? 'heart' : 'heart-outline'}
+              size={14}
+              color={answer.isLiked ? Colors.error : Colors.textTertiary}
+            />
+            <Text style={styles.likeText}>{answer.likeCount}</Text>
+          </TouchableOpacity>
+        )}
         <View style={styles.answerActionsRight}>
           {tr.showToggle && (
             <TouchableOpacity onPress={tr.toggle}>
@@ -257,14 +268,25 @@ export default function QnADetailScreen() {
 
           <Text style={styles.questionContent}>{bodyContent}</Text>
           {qna.imageUrl ? <Attachment url={qna.imageUrl} imageStyle={styles.qnaImage} /> : null}
-          <TouchableOpacity onPress={handleLikeQna} style={styles.likeBtn}>
-            <Ionicons
-              name={qna.isLiked ? 'heart' : 'heart-outline'}
-              size={18}
-              color={qna.isLiked ? Colors.error : Colors.textTertiary}
-            />
-            <Text style={styles.likeText}>{qna.likeCount}</Text>
-          </TouchableOpacity>
+          {isAdmin ? (
+            <View style={styles.likeBtn}>
+              <Ionicons
+                name={qna.isLiked ? 'heart' : 'heart-outline'}
+                size={18}
+                color={qna.isLiked ? Colors.error : Colors.textTertiary}
+              />
+              <Text style={styles.likeText}>{qna.likeCount}</Text>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={handleLikeQna} style={styles.likeBtn}>
+              <Ionicons
+                name={qna.isLiked ? 'heart' : 'heart-outline'}
+                size={18}
+                color={qna.isLiked ? Colors.error : Colors.textTertiary}
+              />
+              <Text style={styles.likeText}>{qna.likeCount}</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* 답변 목록 */}
