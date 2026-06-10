@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[2],
     paddingHorizontal: Spacing[1],
     borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceSecondary,
     paddingLeft: Spacing[3],
   },
   avatar: { width: 60, height: 60, borderRadius: Radius.full },
@@ -372,7 +372,7 @@ const styles = StyleSheet.create({
     gap: Spacing[3],
     paddingVertical: Spacing[4],
     borderBottomWidth: 1,
-    borderBottomColor: Colors.backgroundSecondary,
+    borderBottomColor: Colors.divider,
   },
   menuIcon: {
     width: 40,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing[3],
     alignItems: "center",
     borderRadius: Radius.md,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceSecondary,
   },
   closeButtonText: {
     fontSize: Typography.base,

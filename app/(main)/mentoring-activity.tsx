@@ -209,7 +209,7 @@ const styles = StyleSheet.create({
   writeBtn: { paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], backgroundColor: Colors.primary, borderRadius: Radius.md },
   writeBtnText: { fontSize: Typography.sm, fontWeight: Typography.bold, color: "#fff" },
   // 정렬 바
-  sortBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[5], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.backgroundSecondary },
+  sortBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[5], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.divider },
   sortCount: { fontSize: Typography.sm, color: Colors.textTertiary },
   sortBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.primary + "50", backgroundColor: Colors.primaryLight },
   sortBtnText: { fontSize: Typography.sm, fontWeight: Typography.semibold, color: Colors.primary },

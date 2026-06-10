@@ -14,8 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
 import { adminApi } from "@/src/api/admin";
+import { badgeApi } from "@/src/api/badge";
+import type { BadgeInfo } from "@/src/types/badge";
 import { useAuthStore } from "@/src/store/authStore";
-import { useLanguage, useT } from "@/src/i18n";
+import { useLanguage, useT, badgeName } from "@/src/i18n";
 import { departmentLabel, countryLabel } from "@/src/data/labels";
 import { languageDisplay } from "@/src/data/selectOptions";
 import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
@@ -52,6 +54,7 @@ export default function MentorProfileScreen() {
   const roleText = (r: string) => (r === "MENTOR" ? t.mentor : r === "MENTEE" ? t.mentee : t.none);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const [profile, setProfile] = useState<PartnerProfile | null>(null);
+  const [badges, setBadges] = useState<BadgeInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [toggling, setToggling] = useState(false);
@@ -80,6 +83,15 @@ export default function MentorProfileScreen() {
   useEffect(() => {
     load(true);
   }, [load]);
+
+  // 상대방이 획득한 뱃지 (있을 때만 표시)
+  useEffect(() => {
+    if (!memberId) return;
+    badgeApi
+      .getMemberBadges(Number(memberId))
+      .then(setBadges)
+      .catch(() => setBadges([]));
+  }, [memberId]);
 
   const suspended = profile?.isActive === false;
 
@@ -221,6 +233,17 @@ export default function MentorProfileScreen() {
             </View>
 
           </View>
+
+          {badges.length > 0 && (
+            <View style={styles.badgeGrid}>
+              {badges.map((b) => (
+                <View key={b.badgeId} style={styles.badgeChip}>
+                  <Text style={styles.badgeChipEmoji}>{b.emoji}</Text>
+                  <Text style={styles.badgeChipName}>{badgeName(t, b.badgeId)}</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
           {isAdmin ? (
             /* 관리자: 채팅 대신 활동 정지/해제 토글 */
@@ -441,7 +464,29 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.divider,
     marginHorizontal: Spacing[5],
+  },
+  badgeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing[2],
+  },
+  badgeChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing[1],
+    paddingHorizontal: Spacing[3],
+    paddingVertical: Spacing[2],
+    borderRadius: Radius.full,
+    backgroundColor: Colors.accentLight,
+    borderWidth: 1,
+    borderColor: Colors.accent + "40",
+  },
+  badgeChipEmoji: { fontSize: 16 },
+  badgeChipName: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+    color: Colors.accentDark,
   },
 });

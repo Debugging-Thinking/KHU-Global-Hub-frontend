@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     gap: Spacing[1],
     paddingHorizontal: Spacing[5],
     paddingVertical: Spacing[2],
-    backgroundColor: Colors.backgroundSecondary,
+    backgroundColor: Colors.surfaceSecondary,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
