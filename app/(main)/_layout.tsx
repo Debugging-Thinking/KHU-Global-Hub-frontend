@@ -83,6 +83,7 @@ export default function MainLayout() {
       <Tabs.Screen name="quiz" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity" options={{ href: null }} />
       <Tabs.Screen name="mentoring-activity-create" options={{ href: null }} />
+      <Tabs.Screen name="mentoring-activity-detail" options={{ href: null }} />
       <Tabs.Screen name="mentor-profile" options={{ href: null }} />
       <Tabs.Screen name="board" options={{ href: null }} />
       <Tabs.Screen name="qna" options={{ href: null }} />
