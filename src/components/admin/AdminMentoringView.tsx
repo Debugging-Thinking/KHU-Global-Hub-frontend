@@ -142,7 +142,7 @@ export function AdminMentoringView() {
               style={styles.addInput}
               value={newSem}
               onChangeText={setNewSem}
-              placeholder="26-여름"
+              placeholder="예: 2026-2"
               placeholderTextColor={Colors.textTertiary}
               autoFocus
               onSubmitEditing={addSemester}

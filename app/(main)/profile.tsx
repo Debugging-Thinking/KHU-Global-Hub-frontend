@@ -144,6 +144,30 @@ export default function ProfileScreen() {
     }
   };
 
+  // 관리자: 편집 모드 없이 선호 언어만 즉시 변경 (학생 정보는 기존 값 유지).
+  const handleAdminLanguageSelect = async (lang: string) => {
+    if (!profile || lang === (profile.preferredLanguage ?? 'ko')) return;
+    setSaving(true);
+    setError('');
+    try {
+      const updated = await memberApi.updateMe({
+        name: profile.name,
+        department: profile.department,
+        nationality: profile.nationality,
+        admissionYear: profile.admissionYear,
+        language: bucketFromAzure(lang),
+        preferredLanguage: lang,
+        bio: profile.bio ?? '',
+        // mentoringRole 미전송 → 백엔드가 기존 역할 유지
+      });
+      setProfile(updated);
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? t.updateFailed);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handlePickImage = async () => {
     const picked = await pickImages(false);
     if (!picked[0]) return;
@@ -168,6 +192,7 @@ export default function ProfileScreen() {
 
   if (!profile) return null;
 
+  const isAdmin = profile.isAdmin;
   const displayRole = profile.isAdmin ? 'ADMIN' : profile.mentoringRole;
   const roleColor = ROLE_COLORS[displayRole] ?? Colors.textTertiary;
   const isNewStudent = admissionYear === CURRENT_YEAR;
@@ -182,7 +207,7 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.headerTitle}>{t.profile}</Text>
         </View>
-        {!isEditing ? (
+        {!isAdmin && (!isEditing ? (
           <TouchableOpacity onPress={handleEditStart} style={styles.editBtn}>
             <Ionicons name="pencil-outline" size={16} color={Colors.primary} />
             <Text style={styles.editBtnText}>{t.edit}</Text>
@@ -191,7 +216,7 @@ export default function ProfileScreen() {
           <TouchableOpacity onPress={handleCancel} style={styles.editBtn}>
             <Text style={styles.cancelBtnText}>{t.cancel}</Text>
           </TouchableOpacity>
-        )}
+        ))}
       </View>
 
       {/* 프로필 배너 */}
@@ -227,7 +252,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {!isEditing && (
+      {!isAdmin && !isEditing && (
         <View style={styles.badgeSection}>
           <Text style={styles.badgeSectionTitle}>{t.myBadges}</Text>
           <View style={styles.badgeGrid}>
@@ -253,7 +278,23 @@ export default function ProfileScreen() {
       )}
 
       {/* 정보 카드 */}
-      {!isEditing ? (
+      {isAdmin ? (
+        /* 관리자: 학생 정보 없이 언어 설정만 (편집 모드 없이 바로 변경) */
+        <Card style={styles.editCard}>
+          <SearchableSelect
+            label={t.preferredLanguage}
+            placeholder={t.selectLanguage}
+            modalTitle={t.selectLanguage}
+            searchPlaceholder={t.searchPlaceholder}
+            noResultsText={t.noResults}
+            options={langOpts}
+            value={profile.preferredLanguage ?? 'ko'}
+            displayValue={languageDisplay(profile.preferredLanguage ?? 'ko')}
+            onSelect={handleAdminLanguageSelect}
+          />
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+        </Card>
+      ) : !isEditing ? (
         <Card style={styles.infoCard}>
           <InfoRow icon="school-outline" label={t.department} value={departmentLabel(profile.department, profile.language)} />
           <View style={styles.divider} />
