@@ -1,10 +1,10 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Image,
-  ScrollView,
+  Modal,
+  Pressable,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -27,6 +27,8 @@ interface ActivityItem {
   createdAt: string;
 }
 
+type SortOrder = "asc" | "desc";
+
 function formatDate(iso: string) {
   const d = new Date(iso);
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
@@ -38,6 +40,8 @@ export default function MentoringActivityScreen() {
   const t = useT();
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [sortMenuVisible, setSortMenuVisible] = useState(false);
 
   const fetchActivities = useCallback(() => {
     if (!matchId) return;
@@ -54,6 +58,16 @@ export default function MentoringActivityScreen() {
       fetchActivities();
     }, [fetchActivities])
   );
+
+  // 정렬된 목록
+  const sortedActivities = useMemo(() => {
+    return [...activities].sort((a, b) => {
+      const diff = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortOrder === "asc" ? diff : -diff;
+    });
+  }, [activities, sortOrder]);
+
+  const sortLabel = sortOrder === "asc" ? "오래된 순" : "최신 순";
 
   return (
     <Screen>
@@ -73,6 +87,21 @@ export default function MentoringActivityScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* 정렬 바 */}
+      {!loading && activities.length > 0 && (
+        <View style={styles.sortBar}>
+          <Text style={styles.sortCount}>총 {activities.length}개</Text>
+          <TouchableOpacity
+            style={styles.sortBtn}
+            onPress={() => setSortMenuVisible(true)}
+          >
+            <Ionicons name="swap-vertical-outline" size={14} color={Colors.primary} />
+            <Text style={styles.sortBtnText}>{sortLabel}</Text>
+            <Ionicons name="chevron-down" size={14} color={Colors.primary} />
+          </TouchableOpacity>
+        </View>
+      )}
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator color={Colors.primary} size="large" />
@@ -85,7 +114,7 @@ export default function MentoringActivityScreen() {
         </View>
       ) : (
         <FlatList
-          data={activities}
+          data={sortedActivities}
           keyExtractor={(item) => String(item.id)}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -94,36 +123,81 @@ export default function MentoringActivityScreen() {
               {/* 타임라인 인디케이터 */}
               <View style={styles.timelineCol}>
                 <View style={styles.timelineDot} />
-                {index < activities.length - 1 && <View style={styles.timelineLine} />}
+                {index < sortedActivities.length - 1 && <View style={styles.timelineLine} />}
               </View>
 
-              <View style={styles.cardContent}>
+              <TouchableOpacity
+                style={styles.cardContent}
+                activeOpacity={0.7}
+                onPress={() =>
+                  router.push(
+                    `/(main)/mentoring-activity-detail?matchId=${matchId}&partnerName=${partnerName}&activityId=${item.id}`
+                  )
+                }
+              >
                 <Text style={styles.cardDate}>{formatDate(item.createdAt)}</Text>
                 <Text style={styles.cardTitle}>{item.title}</Text>
-                <Text style={styles.cardBody}>{item.content}</Text>
+                <Text style={styles.cardBody} numberOfLines={2}>{item.content}</Text>
 
-                {/* 첨부 이미지 */}
                 {item.imageUrls && item.imageUrls.length > 0 && (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.imageRow}
-                  >
-                    {item.imageUrls.map((uri, i) => (
-                      <Image
-                        key={i}
-                        source={{ uri }}
-                        style={styles.activityImage}
-                        resizeMode="cover"
-                      />
-                    ))}
-                  </ScrollView>
+                  <View style={styles.imageCountRow}>
+                    <Ionicons name="image-outline" size={14} color={Colors.textTertiary} />
+                    <Text style={styles.imageCountText}>사진 {item.imageUrls.length}장</Text>
+                  </View>
                 )}
-              </View>
+              </TouchableOpacity>
             </View>
           )}
         />
       )}
+
+      {/* 정렬 선택 모달 */}
+      <Modal
+        visible={sortMenuVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSortMenuVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setSortMenuVisible(false)}>
+          <View style={styles.sortMenu}>
+            <Text style={styles.sortMenuTitle}>정렬 기준</Text>
+
+            <TouchableOpacity
+              style={[styles.sortOption, sortOrder === "asc" && styles.sortOptionActive]}
+              onPress={() => { setSortOrder("asc"); setSortMenuVisible(false); }}
+            >
+              <Ionicons
+                name="arrow-up-outline"
+                size={18}
+                color={sortOrder === "asc" ? Colors.primary : Colors.textSecondary}
+              />
+              <Text style={[styles.sortOptionText, sortOrder === "asc" && styles.sortOptionTextActive]}>
+                오래된 순
+              </Text>
+              {sortOrder === "asc" && (
+                <Ionicons name="checkmark" size={18} color={Colors.primary} style={{ marginLeft: "auto" }} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.sortOption, sortOrder === "desc" && styles.sortOptionActive]}
+              onPress={() => { setSortOrder("desc"); setSortMenuVisible(false); }}
+            >
+              <Ionicons
+                name="arrow-down-outline"
+                size={18}
+                color={sortOrder === "desc" ? Colors.primary : Colors.textSecondary}
+              />
+              <Text style={[styles.sortOptionText, sortOrder === "desc" && styles.sortOptionTextActive]}>
+                최신 순
+              </Text>
+              {sortOrder === "desc" && (
+                <Ionicons name="checkmark" size={18} color={Colors.primary} style={{ marginLeft: "auto" }} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </Screen>
   );
 }
@@ -134,6 +208,12 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: Typography.lg, fontWeight: Typography.bold, color: Colors.textPrimary },
   writeBtn: { paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], backgroundColor: Colors.primary, borderRadius: Radius.md },
   writeBtnText: { fontSize: Typography.sm, fontWeight: Typography.bold, color: "#fff" },
+  // 정렬 바
+  sortBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[5], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.backgroundSecondary },
+  sortCount: { fontSize: Typography.sm, color: Colors.textTertiary },
+  sortBtn: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: Spacing[3], paddingVertical: Spacing[2], borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.primary + "50", backgroundColor: Colors.primaryLight },
+  sortBtnText: { fontSize: Typography.sm, fontWeight: Typography.semibold, color: Colors.primary },
+  // 목록
   center: { flex: 1, alignItems: "center", justifyContent: "center", gap: Spacing[2] },
   emptyText: { fontSize: Typography.base, fontWeight: Typography.semibold, color: Colors.textSecondary },
   emptyDesc: { fontSize: Typography.sm, color: Colors.textTertiary },
@@ -146,6 +226,14 @@ const styles = StyleSheet.create({
   cardDate: { fontSize: Typography.xs, color: Colors.textTertiary },
   cardTitle: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.textPrimary },
   cardBody: { fontSize: Typography.sm, color: Colors.textSecondary, lineHeight: Typography.sm * 1.6 },
-  imageRow: { marginTop: Spacing[2] },
-  activityImage: { width: 120, height: 120, borderRadius: Radius.md, marginRight: Spacing[2] },
+  imageCountRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  imageCountText: { fontSize: Typography.xs, color: Colors.textTertiary },
+  // 정렬 모달
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.4)", justifyContent: "center", alignItems: "center" },
+  sortMenu: { backgroundColor: Colors.background, borderRadius: Radius.xl, padding: Spacing[4], width: 240, gap: Spacing[2], shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 12, elevation: 8 },
+  sortMenuTitle: { fontSize: Typography.base, fontWeight: Typography.bold, color: Colors.textPrimary, marginBottom: Spacing[2], textAlign: "center" },
+  sortOption: { flexDirection: "row", alignItems: "center", gap: Spacing[3], paddingVertical: Spacing[3], paddingHorizontal: Spacing[3], borderRadius: Radius.md },
+  sortOptionActive: { backgroundColor: Colors.primaryLight },
+  sortOptionText: { fontSize: Typography.base, color: Colors.textSecondary },
+  sortOptionTextActive: { color: Colors.primary, fontWeight: Typography.semibold },
 });
