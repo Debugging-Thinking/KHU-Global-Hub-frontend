@@ -26,7 +26,7 @@ function currentSemester() {
 
 /**
  * 관리자 멘토링 화면 — 학기별 매칭 현황 + 전역 대기열에서 멤버를 선택해 그 학기로 매칭.
- * 대기열은 저장된 역할 우선으로 좌우 분리(멘토 = 이미 MENTOR ∪ 입학 1년+ 멘티=승격 예정, 그 외 = 멘티).
+ * 대기열은 백엔드가 저장된 역할로 나눈 그대로 좌우 분리(멘토/멘티 = 각자 가입 시 고른 역할).
  * 체크박스 = 선택 토글, 카드 본문 탭 = 프로필 화면 이동.
  */
 export function AdminMentoringView() {
@@ -68,22 +68,13 @@ export function AdminMentoringView() {
 
   const semesterMatches = matches.filter((m) => m.semester === semester);
 
-  // 좌우 분리 — 저장된 역할(가입 시 본인 선택)을 우선 신호로 사용한다.
-  // 멘토 컬럼: 이미 MENTOR  ∪  입학 1년+ 멘티(매칭 시 자동 승격 예정). 그 외는 멘티 컬럼.
-  // (이전엔 admissionYear로만 나눠 가입 시 멘토를 고른 멤버까지 전부 멘티로 몰리는 버그가 있었음)
-  const { mentorCol, menteeCol, allQueue } = useMemo(() => {
-    const yr = new Date().getFullYear();
-    const tagged = [
-      ...queue.waitingMentors.map((m) => ({ ...m, role: "MENTOR" as const })),
-      ...queue.waitingMentees.map((m) => ({ ...m, role: "MENTEE" as const })),
-    ];
-    const isMentorSide = (m: (typeof tagged)[number]) => m.role === "MENTOR" || m.admissionYear < yr;
-    return {
-      allQueue: tagged,
-      mentorCol: tagged.filter(isMentorSide),
-      menteeCol: tagged.filter((m) => !isMentorSide(m)),
-    };
-  }, [queue]);
+  // 좌우 분리 = 백엔드가 저장된 역할(가입 시 본인 선택, 관리자 변경 반영)로 나눠 준 그대로 사용.
+  // waitingMentors=멘토 / waitingMentees=멘티. 입학년도로 재분류하지 않는다 — 선배가 멘티를
+  // 선택했어도 본인이 고른 역할대로 표시하고, 매칭 시 필요하면 백엔드가 자동 승격한다.
+  // (입학년도로 끌어올리면 prod처럼 멘티가 전원 선배일 때 멘티 컬럼이 비는 버그가 났었음)
+  const mentorCol = queue.waitingMentors;
+  const menteeCol = queue.waitingMentees;
+  const allQueue = useMemo(() => [...queue.waitingMentors, ...queue.waitingMentees], [queue]);
 
   const allSelected = allQueue.length > 0 && allQueue.every((m) => selected.has(m.memberId));
 
@@ -202,8 +193,8 @@ export function AdminMentoringView() {
             <Text style={styles.empty}>대기 중인 멤버가 없습니다.</Text>
           ) : (
             <View style={styles.cols}>
-              <QueueCol title="멘토" hint="선배·승격 예정" color={MENTOR_COLOR} members={mentorCol} selected={selected} onToggle={toggle} onView={openProfile} />
-              <QueueCol title="멘티" hint="신입생" color={MENTEE_COLOR} members={menteeCol} selected={selected} onToggle={toggle} onView={openProfile} />
+              <QueueCol title="멘토" hint="멘토로 등록" color={MENTOR_COLOR} members={mentorCol} selected={selected} onToggle={toggle} onView={openProfile} />
+              <QueueCol title="멘티" hint="멘티로 등록" color={MENTEE_COLOR} members={menteeCol} selected={selected} onToggle={toggle} onView={openProfile} />
             </View>
           )}
         </>
