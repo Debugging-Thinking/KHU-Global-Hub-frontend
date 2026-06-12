@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
 
 import { Screen } from "@/src/components/layout/Screen";
 import { Card } from "@/src/components/ui/Card";
@@ -25,9 +26,11 @@ function currentSemester() {
 
 /**
  * 관리자 멘토링 화면 — 학기별 매칭 현황 + 전역 대기열에서 멤버를 선택해 그 학기로 매칭.
- * 대기열은 입학년도로 좌우 분리: 입학 1년+ = 멘토(매칭 시 자동승격), 올해 신입생 = 멘티.
+ * 대기열은 저장된 역할 우선으로 좌우 분리(멘토 = 이미 MENTOR ∪ 입학 1년+ 멘티=승격 예정, 그 외 = 멘티).
+ * 체크박스 = 선택 토글, 카드 본문 탭 = 프로필 화면 이동.
  */
 export function AdminMentoringView() {
+  const router = useRouter();
   const [matches, setMatches] = useState<AdminMatch[]>([]);
   const [queue, setQueue] = useState<MentoringQueue>({ waitingMentors: [], waitingMentees: [] });
   const [loading, setLoading] = useState(true);
@@ -65,14 +68,20 @@ export function AdminMentoringView() {
 
   const semesterMatches = matches.filter((m) => m.semester === semester);
 
-  // 입학년도 기준 좌우 분리 — 입학 1년+ = 멘토(매칭 시 자동승격), 올해 신입생 = 멘티
+  // 좌우 분리 — 저장된 역할(가입 시 본인 선택)을 우선 신호로 사용한다.
+  // 멘토 컬럼: 이미 MENTOR  ∪  입학 1년+ 멘티(매칭 시 자동 승격 예정). 그 외는 멘티 컬럼.
+  // (이전엔 admissionYear로만 나눠 가입 시 멘토를 고른 멤버까지 전부 멘티로 몰리는 버그가 있었음)
   const { mentorCol, menteeCol, allQueue } = useMemo(() => {
-    const all = [...queue.waitingMentors, ...queue.waitingMentees];
     const yr = new Date().getFullYear();
+    const tagged = [
+      ...queue.waitingMentors.map((m) => ({ ...m, role: "MENTOR" as const })),
+      ...queue.waitingMentees.map((m) => ({ ...m, role: "MENTEE" as const })),
+    ];
+    const isMentorSide = (m: (typeof tagged)[number]) => m.role === "MENTOR" || m.admissionYear < yr;
     return {
-      allQueue: all,
-      mentorCol: all.filter((m) => m.admissionYear < yr),
-      menteeCol: all.filter((m) => m.admissionYear >= yr),
+      allQueue: tagged,
+      mentorCol: tagged.filter(isMentorSide),
+      menteeCol: tagged.filter((m) => !isMentorSide(m)),
     };
   }, [queue]);
 
@@ -86,6 +95,8 @@ export function AdminMentoringView() {
       return n;
     });
   const toggleAll = () => setSelected(allSelected ? new Set() : new Set(allQueue.map((m) => m.memberId)));
+  const openProfile = (memberId: number) =>
+    router.push(`/(main)/mentor-profile?memberId=${memberId}`);
 
   const addSemester = () => {
     const v = newSem.trim();
@@ -191,8 +202,8 @@ export function AdminMentoringView() {
             <Text style={styles.empty}>대기 중인 멤버가 없습니다.</Text>
           ) : (
             <View style={styles.cols}>
-              <QueueCol title="멘토" hint="입학 1년+" color={MENTOR_COLOR} members={mentorCol} selected={selected} onToggle={toggle} />
-              <QueueCol title="멘티" hint="신입생" color={MENTEE_COLOR} members={menteeCol} selected={selected} onToggle={toggle} />
+              <QueueCol title="멘토" hint="선배·승격 예정" color={MENTOR_COLOR} members={mentorCol} selected={selected} onToggle={toggle} onView={openProfile} />
+              <QueueCol title="멘티" hint="신입생" color={MENTEE_COLOR} members={menteeCol} selected={selected} onToggle={toggle} onView={openProfile} />
             </View>
           )}
         </>
@@ -222,6 +233,7 @@ function QueueCol({
   members,
   selected,
   onToggle,
+  onView,
 }: {
   title: string;
   hint: string;
@@ -229,6 +241,7 @@ function QueueCol({
   members: QueueMember[];
   selected: Set<number>;
   onToggle: (id: number) => void;
+  onView: (id: number) => void;
 }) {
   return (
     <View style={styles.col}>
@@ -242,13 +255,20 @@ function QueueCol({
         members.map((m) => {
           const on = selected.has(m.memberId);
           return (
-            <TouchableOpacity key={m.memberId} style={styles.qCard} onPress={() => onToggle(m.memberId)} activeOpacity={0.7}>
-              <Ionicons name={on ? "checkbox" : "square-outline"} size={18} color={on ? color : Colors.textTertiary} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.qName} numberOfLines={1}>{m.name}</Text>
-                <Text style={styles.qMeta} numberOfLines={1}>{m.admissionYear} · {m.nationality}</Text>
-              </View>
-            </TouchableOpacity>
+            <View key={m.memberId} style={styles.qCard}>
+              {/* 체크박스만 선택 토글 (카드 본문 탭은 프로필 보기로 분리) */}
+              <TouchableOpacity onPress={() => onToggle(m.memberId)} hitSlop={10} activeOpacity={0.6}>
+                <Ionicons name={on ? "checkbox" : "square-outline"} size={20} color={on ? color : Colors.textTertiary} />
+              </TouchableOpacity>
+              {/* 이름/정보 탭 → 프로필 화면 이동 */}
+              <TouchableOpacity style={styles.qInfo} onPress={() => onView(m.memberId)} activeOpacity={0.6}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.qName} numberOfLines={1}>{m.name}</Text>
+                  <Text style={styles.qMeta} numberOfLines={1}>{m.admissionYear} · {m.nationality}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textTertiary} />
+              </TouchableOpacity>
+            </View>
           );
         })
       )}
@@ -283,6 +303,7 @@ const styles = StyleSheet.create({
   colHint: { fontSize: 11, color: Colors.textTertiary },
   colEmpty: { fontSize: 12, color: Colors.textTertiary, paddingVertical: 8 },
   qCard: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: "#F0F0F0" },
+  qInfo: { flex: 1, flexDirection: "row", alignItems: "center", gap: 6 },
   qName: { fontSize: 13, fontWeight: "600", color: Colors.textPrimary },
   qMeta: { fontSize: 11, color: Colors.textTertiary, marginTop: 1 },
   msg: { marginTop: 12, color: Colors.textPrimary, textAlign: "center" },
