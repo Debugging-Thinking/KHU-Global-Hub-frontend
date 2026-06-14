@@ -20,7 +20,8 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useT, useLanguage, timeAgo, type Language } from '@/src/i18n';
 import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
 import { useItemTranslation } from '@/src/hooks/useTextTranslate';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { CourseReview, LectureDetail } from '@/src/types/lecture';
 
 // 별점 색 — 밝은 골드(채움) + 따뜻한 라이트그레이(빈칸)
@@ -41,6 +42,7 @@ function confirmAction(title: string, message: string, cancel: string, ok: strin
 // ─── 별점 ──────────────────────────────────────────────────────────
 
 function StarRow({ value, size = 15, gap = 2 }: { value: number; size?: number; gap?: number }) {
+  const styles = useThemedStyles(makeStyles);
   // 반올림(0.5단위) — 평균 4.3 → 4.5개 표시. star-half로 부분 별 표현.
   const rounded = Math.round(value * 2) / 2;
   return (
@@ -55,6 +57,7 @@ function StarRow({ value, size = 15, gap = 2 }: { value: number; size?: number; 
 }
 
 function StarSelector({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.starSelect}>
       {[1, 2, 3, 4, 5].map((i) => {
@@ -82,6 +85,7 @@ type Opt = { value: string; label: string };
 function ChipGroup({
   options, value, onSelect,
 }: { options: Opt[]; value: string | null; onSelect: (v: string | null) => void }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.chipRow}>
       {options.map((o) => {
@@ -106,6 +110,7 @@ function ChipGroup({
 function DistRow({
   label, counts, opts, colors, t,
 }: { label: string; counts: Record<string, number>; opts: Opt[]; colors: string[]; t: ReturnType<typeof useT> }) {
+  const styles = useThemedStyles(makeStyles);
   const total = opts.reduce((s, o) => s + (counts[o.value] ?? 0), 0);
   return (
     <View style={styles.distRow}>
@@ -141,6 +146,8 @@ function DistRow({
 
 // 항목별 원문↔번역 토글 링크 (게시판과 동일).
 function ItemToggle({ tr, t }: { tr: ReturnType<typeof useItemTranslation>; t: ReturnType<typeof useT> }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   if (!tr.showToggle) return null;
   return (
     <TouchableOpacity onPress={tr.toggle} hitSlop={6} style={styles.translateBtn}>
@@ -163,6 +170,8 @@ function ReviewCard({
   t: ReturnType<typeof useT>;
   onDelete: () => void;
 }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   // 강의평 본문 = 게시판 방식: 6개 언어는 사전번역본/원문 토글, 그 외는 원문 + on-demand 번역.
   const tr = useItemTranslation([review.content], [review.originalContent], review.originalLanguage, prestored, viewerBucket, preferredCode);
@@ -197,6 +206,8 @@ function ReviewCard({
 export default function LectureDetailScreen() {
   const t = useT();
   const router = useRouter();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { lectureId } = useLocalSearchParams<{ lectureId: string }>();
   const id = Number(lectureId);
   const viewerBucket = useLanguage();
@@ -417,7 +428,7 @@ export default function LectureDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   fill: { flex: 1 },
   header: {
     flexDirection: 'row',

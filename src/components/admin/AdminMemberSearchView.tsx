@@ -14,13 +14,16 @@ import { useRouter } from "expo-router";
 
 import { Screen } from "@/src/components/layout/Screen";
 import { adminApi, type MemberSearchResult } from "@/src/api/admin";
-import { Colors } from "@/constants/theme";
+import { type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 /**
  * 관리자 채팅 탭 대체 화면 — 가입 회원 목록을 표시(진입 시 전체)하고
  * 이름으로 필터 검색. 행을 누르면 타인 프로필(정지 토글 포함)로 이동.
  */
 export function AdminMemberSearchView() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<MemberSearchResult[]>([]);
@@ -96,7 +99,7 @@ export function AdminMemberSearchView() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   title: { fontSize: 20, fontWeight: "700", color: Colors.textPrimary, marginBottom: 16 },
   searchRow: { flexDirection: "row", gap: 8 },
   input: {

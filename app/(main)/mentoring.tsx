@@ -19,7 +19,8 @@ import { AdminMentoringView } from "@/src/components/admin/AdminMentoringView";
 import { useAuthStore } from "@/src/store/authStore";
 import { useT, useLanguage } from "@/src/i18n";
 import { departmentLabel, countryLabel } from "@/src/data/labels";
-import { Colors, Radius, Shadow, Spacing, Typography } from "@/constants/theme";
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 interface MatchInfo {
   matchId: number;
@@ -38,6 +39,8 @@ interface MatchInfo {
 }
 
 export default function MentoringScreen() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const t = useT();
   const lang = useLanguage();
@@ -243,7 +246,7 @@ export default function MentoringScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   section: { paddingTop: Spacing[5], paddingBottom: Spacing[3] },
   sectionTitle: {
     fontSize: Typography["2xl"],

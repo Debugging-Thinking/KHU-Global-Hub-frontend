@@ -24,7 +24,8 @@ import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
 import { useAutoTranslate } from '@/src/hooks/useTextTranslate';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { ChatMessage } from '@/src/types/chat';
 
 const POLL_INTERVAL = 5000;
@@ -37,6 +38,7 @@ interface PartnerInfo {
 
 /** 원형 아바타 — 이미지 없으면 이름 첫 글자. */
 function Avatar({ partner, size = 32 }: { partner: PartnerInfo | null; size?: number }) {
+  const styles = useThemedStyles(makeStyles);
   const dim = { width: size, height: size, borderRadius: size / 2 };
   if (partner?.profileImageUrl) {
     return <Image source={{ uri: partner.profileImageUrl }} style={[styles.avatar, dim]} />;
@@ -71,6 +73,7 @@ function MessageBubble({
   partner: PartnerInfo | null;
   showAvatar: boolean;
 }) {
+  const styles = useThemedStyles(makeStyles);
   const tr = useAutoTranslate([item.content], target, !isMine);
 
   // 웹: 내 메시지 우클릭 → 삭제 (모바일은 길게누르기 onLongPress 유지).
@@ -119,6 +122,8 @@ function MessageBubble({
 }
 
 export default function ChatRoomScreen() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const t = useT();
   const { partnerId } = useLocalSearchParams<{ partnerId: string }>();
@@ -288,7 +293,7 @@ export default function ChatRoomScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   header: {

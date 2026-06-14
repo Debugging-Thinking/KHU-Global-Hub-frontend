@@ -7,11 +7,13 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { authApi } from '@/src/api/auth';
 import { useT } from '@/src/i18n';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useThemedStyles } from '@/src/theme';
 
 export default function ResetPasswordScreen() {
   const router = useRouter();
   const t = useT();
+  const styles = useThemedStyles(makeStyles);
   const { email } = useLocalSearchParams<{ email: string }>();
   const [code, setCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -104,7 +106,7 @@ export default function ResetPasswordScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: Spacing[8],

@@ -16,10 +16,13 @@ import { Card } from '@/src/components/ui/Card';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { QnASummary } from '@/src/types/qna';
 
 function QnACard({ item, onPress, t }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT> }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Card onPress={onPress} style={styles.card}>
       <View style={styles.cardTop}>
@@ -53,6 +56,8 @@ function QnACard({ item, onPress, t }: { item: QnASummary; onPress: () => void; 
 export default function QnAScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const [items, setItems] = useState<QnASummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -119,7 +124,7 @@ export default function QnAScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -18,7 +18,8 @@ import { useAuthStore } from "@/src/store/authStore";
 import { AdminMemberSearchView } from "@/src/components/admin/AdminMemberSearchView";
 import apiClient, { unwrap } from "@/src/api/client";
 import { useT, timeAgo } from "@/src/i18n";
-import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+import { Radius, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 import type { ConversationSummary } from "@/src/types/chat";
 
 interface MatchHistory {
@@ -53,6 +54,7 @@ function ConversationItem({
   t: ReturnType<typeof useT>;
   badge?: string;
 }) {
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity onPress={onPress} style={styles.item}>
       <View style={styles.avatarWrap}>
@@ -92,6 +94,8 @@ function ConversationItem({
 }
 
 export default function ChatListScreen() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const router = useRouter();
   const t = useT();
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
@@ -251,7 +255,7 @@ export default function ChatListScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",

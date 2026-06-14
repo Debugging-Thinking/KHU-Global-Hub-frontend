@@ -36,12 +36,14 @@ import { useT, timeAgo } from '@/src/i18n';
 import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
 import { useItemTranslation } from '@/src/hooks/useTextTranslate';
 import type { Language } from '@/src/i18n';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { CommentResponse, PostDetail } from '@/src/types/board';
 
 /** 항목별 원문↔번역 토글 링크. */
 function ItemToggle({ tr }: { tr: ReturnType<typeof useItemTranslation> }) {
   const t = useT();
+  const styles = useThemedStyles(makeStyles);
   if (!tr.showToggle) return null;
   return (
     <TouchableOpacity onPress={tr.toggle} style={styles.commentTranslate}>
@@ -68,6 +70,8 @@ function ReplyItem({
   onAuthorPress: (id: number) => void;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
@@ -106,6 +110,8 @@ function CommentItem({
   onAuthorPress: (id: number) => void;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([comment.content], [comment.originalContent], comment.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
@@ -161,6 +167,8 @@ function CommentItem({
 export default function PostDetailScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { postId } = useLocalSearchParams<{ postId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
@@ -429,7 +437,7 @@ export default function PostDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',

@@ -15,7 +15,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
 import { useT } from "@/src/i18n";
-import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+import { Radius, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 interface ActivityItem {
   id: number;
@@ -38,6 +39,8 @@ export default function MentoringActivityScreen() {
   const { matchId, partnerName } = useLocalSearchParams<{ matchId: string; partnerName: string }>();
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
@@ -202,7 +205,7 @@ export default function MentoringActivityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[4], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.background },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: Typography.lg, fontWeight: Typography.bold, color: Colors.textPrimary },

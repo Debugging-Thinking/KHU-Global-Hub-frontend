@@ -8,12 +8,15 @@ import { Button } from '@/src/components/ui/Button';
 import { Input } from '@/src/components/ui/Input';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 export default function LoginScreen() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -102,7 +105,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: 'center',

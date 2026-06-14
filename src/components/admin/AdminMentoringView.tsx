@@ -14,10 +14,10 @@ import { useRouter } from "expo-router";
 import { Screen } from "@/src/components/layout/Screen";
 import { Card } from "@/src/components/ui/Card";
 import { adminApi, type AdminMatch, type MentoringQueue, type QueueMember } from "@/src/api/admin";
-import { Colors } from "@/constants/theme";
+import { type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 const MENTOR_COLOR = "#0D9488"; // 멘토 = 틸 청록 (멘티 빨강의 보색 — 대비 선명 + 차분)
-const MENTEE_COLOR = Colors.primary; // 멘티 = 경희 레드
 
 function currentSemester() {
   const now = new Date();
@@ -30,6 +30,9 @@ function currentSemester() {
  * 체크박스 = 선택 토글, 카드 본문 탭 = 프로필 화면 이동.
  */
 export function AdminMentoringView() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
+  const MENTEE_COLOR = Colors.primary; // 멘티 = 경희 레드
   const router = useRouter();
   const [matches, setMatches] = useState<AdminMatch[]>([]);
   const [queue, setQueue] = useState<MentoringQueue>({ waitingMentors: [], waitingMentees: [] });
@@ -234,6 +237,8 @@ function QueueCol({
   onToggle: (id: number) => void;
   onView: (id: number) => void;
 }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.col}>
       <View style={[styles.colHead, { borderColor: color }]}>
@@ -267,7 +272,7 @@ function QueueCol({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   title: { fontSize: 20, fontWeight: "700", color: Colors.textPrimary, marginBottom: 8 },
   semRow: { marginBottom: 4 },
   semChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18, backgroundColor: Colors.surface, borderWidth: 1, borderColor: "#E5E7EB" },
@@ -283,7 +288,7 @@ const styles = StyleSheet.create({
   matchCard: { padding: 12, marginBottom: 8 },
   pair: { fontSize: 14, color: Colors.textPrimary },
   mentor: { fontWeight: "700", color: MENTOR_COLOR },
-  mentee: { fontWeight: "700", color: MENTEE_COLOR },
+  mentee: { fontWeight: "700", color: Colors.primary },
   meta: { fontSize: 12, color: Colors.textTertiary, marginTop: 2 },
   queueHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   selectAll: { fontSize: 13, color: Colors.primary, fontWeight: "600" },

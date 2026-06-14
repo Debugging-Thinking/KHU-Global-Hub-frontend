@@ -4,7 +4,8 @@ import {
   View, type ImageStyle, type StyleProp,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 /** S3 URL 마지막 세그먼트에서 원본 파일명 복원 (업로드 시 키 끝에 보존됨). */
 export function fileNameFromUrl(url: string): string {
@@ -27,6 +28,8 @@ export function isImageUrl(url: string): boolean {
  */
 export function Attachment({ url, imageStyle }: { url: string; imageStyle?: StyleProp<ImageStyle> }) {
   const [zoom, setZoom] = useState(false);
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   if (isImageUrl(url)) {
     return (
@@ -55,7 +58,7 @@ export function Attachment({ url, imageStyle }: { url: string; imageStyle?: Styl
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   image: {
     width: 180,
     height: 180,

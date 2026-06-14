@@ -37,6 +37,8 @@ export interface ProfileSetupRequest {
   mentoringRole: MentoringRole;
   /** 자기소개 (선택, 최대 500자). */
   bio?: string | null;
+  /** UI 테마 선호 ("LIGHT" | "DARK"). 미입력 시 백엔드가 LIGHT 처리. */
+  theme?: 'LIGHT' | 'DARK';
 }
 
 export interface AuthTokens {
@@ -65,6 +67,8 @@ export interface Profile {
   profileImageUrl: string | null;
   /** 자기소개 (선택, 최대 500자). */
   bio?: string | null;
+  /** UI 테마 선호 ("LIGHT" | "DARK"). 다크모드 동기화용. */
+  theme?: 'LIGHT' | 'DARK';
   /** 관리자 계정 여부 — 관리자 모드 화면 분기용. */
   isAdmin?: boolean;
   /** 계정 활성 여부 (false = 정지됨). 관리자 정지 토글용. */

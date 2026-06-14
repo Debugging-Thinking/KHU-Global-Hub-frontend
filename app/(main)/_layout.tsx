@@ -2,7 +2,8 @@ import { Tabs } from "expo-router";
 import { Platform, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-import { Colors, Shadow } from "@/constants/theme";
+import { Shadow, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 import { useT } from "@/src/i18n";
 import { useAuthStore } from "@/src/store/authStore";
 
@@ -13,6 +14,8 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 }
 
 export default function MainLayout() {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const t = useT();
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
 
@@ -98,7 +101,7 @@ export default function MainLayout() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   tabBar: {
     backgroundColor: Colors.surface,
     borderTopWidth: 1,

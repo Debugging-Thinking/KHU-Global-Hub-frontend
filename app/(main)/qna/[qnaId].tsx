@@ -35,7 +35,8 @@ import { useT, timeAgo } from '@/src/i18n';
 import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
 import { useItemTranslation } from '@/src/hooks/useTextTranslate';
 import type { Language } from '@/src/i18n';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { AnswerResponse, QnADetail } from '@/src/types/qna';
 
 function AnswerCard({
@@ -61,6 +62,8 @@ function AnswerCard({
   onDelete: (answerId: number) => void;
   onAuthorPress: (id: number) => void;
 }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const tr = useItemTranslation([answer.content], [answer.originalContent], answer.originalLanguage, prestored, viewerBucket, preferredCode);
   return (
@@ -124,6 +127,8 @@ function AnswerCard({
 export default function QnADetailScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const { qnaId } = useLocalSearchParams<{ qnaId: string }>();
   const userLanguage = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
@@ -353,7 +358,7 @@ export default function QnADetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: {
     flexDirection: 'row',

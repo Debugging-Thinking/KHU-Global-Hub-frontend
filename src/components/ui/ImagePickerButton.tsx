@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { pickFiles } from '@/src/lib/pickImages';
 import { imageApi } from '@/src/api/image';
 import { fileNameFromUrl, isImageUrl } from '@/src/components/ui/Attachment';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 /**
  * 첨부 버튼(클립). 탭 → 파일 선택(이미지·문서) → S3 업로드 → 미리보기(+삭제).
@@ -20,6 +21,8 @@ export function ImagePickerButton({
   size?: number;
 }) {
   const [busy, setBusy] = useState(false);
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   const pick = async () => {
     setBusy(true);
@@ -63,7 +66,7 @@ export function ImagePickerButton({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   iconBtn: { padding: Spacing[1], alignItems: 'center', justifyContent: 'center' },
   previewWrap: { position: 'relative' },
   preview: { width: 44, height: 44, borderRadius: Radius.sm, backgroundColor: Colors.surfaceSecondary },

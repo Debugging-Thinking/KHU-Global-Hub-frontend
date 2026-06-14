@@ -9,7 +9,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 export interface SelectOption {
   value: string;
@@ -53,6 +54,8 @@ export function SearchableSelect({
 }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   const selectedLabel =
     displayValue ?? options.find((o) => o.value === value)?.label ?? null;
@@ -153,7 +156,7 @@ export function SearchableSelect({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: { gap: Spacing[1] },
   label: {
     fontSize: Typography.sm,
