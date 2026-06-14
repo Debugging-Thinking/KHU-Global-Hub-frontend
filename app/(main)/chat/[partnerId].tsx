@@ -72,11 +72,28 @@ function MessageBubble({
   showAvatar: boolean;
 }) {
   const tr = useAutoTranslate([item.content], target, !isMine);
+
+  // 웹: 내 메시지 우클릭 → 삭제 (모바일은 길게누르기 onLongPress 유지).
+  // RNW는 onContextMenu 프롭을 전달하지 않으므로 DOM 노드에 직접 리스너를 건다.
+  const bubbleRef = useRef<any>(null);
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !isMine) return;
+    const node = bubbleRef.current as unknown as HTMLElement | null;
+    if (!node || typeof node.addEventListener !== 'function') return;
+    const onContext = (e: Event) => {
+      e.preventDefault(); // 브라우저 기본 우클릭 메뉴 억제
+      onDelete(item.messageId);
+    };
+    node.addEventListener('contextmenu', onContext);
+    return () => node.removeEventListener('contextmenu', onContext);
+  }, [isMine, item.messageId, onDelete]);
+
   return (
     <View style={[styles.msgRow, isMine && styles.msgRowRight]}>
       {!isMine &&
         (showAvatar ? <Avatar partner={partner} size={32} /> : <View style={styles.avatarSpacer} />)}
       <Pressable
+        ref={bubbleRef}
         onLongPress={isMine ? () => onDelete(item.messageId) : undefined}
         delayLongPress={350}
         style={[styles.bubble, isMine ? styles.bubbleMine : styles.bubbleOther]}
