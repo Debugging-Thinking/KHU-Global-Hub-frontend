@@ -6,7 +6,8 @@ import {
   Text,
   ViewStyle,
 } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../../../constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '../../../constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
@@ -32,6 +33,8 @@ export function Button({
   fullWidth = false,
   style,
 }: Props) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isDisabled = disabled || loading;
 
   return (
@@ -62,7 +65,7 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',

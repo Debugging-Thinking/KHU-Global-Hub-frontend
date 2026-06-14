@@ -8,7 +8,8 @@ import {
   ViewStyle,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing } from '../../../constants/theme';
+import { Spacing, type ThemeColors } from '../../../constants/theme';
+import { useThemedStyles } from '@/src/theme';
 
 interface Props {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ export function Screen({
   padded = true,
   keyboardAvoiding = false,
 }: Props) {
+  const styles = useThemedStyles(makeStyles);
   const inner = scrollable ? (
     <ScrollView
       style={styles.scroll}
@@ -56,7 +58,7 @@ export function Screen({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
   fill: { flex: 1 },
   scroll: { flex: 1, backgroundColor: Colors.background },

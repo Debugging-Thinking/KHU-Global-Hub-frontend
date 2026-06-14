@@ -20,7 +20,8 @@ import { Screen } from '@/src/components/layout/Screen';
 import { guideApi } from '@/src/api/guide';
 import { adminGuideApi, type AdminTipBody } from '@/src/api/adminGuide';
 import type { GuideCategory, GuideTip } from '@/src/types/guide';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import { badgeApi } from '@/src/api/badge';
 import type { BadgeId } from '@/src/types/badge';
 import { useAuthStore } from '@/src/store/authStore';
@@ -88,6 +89,8 @@ function TipCard({
   admin?: { onEdit: () => void; onDelete: () => void };
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.tipCard}>
       <Text style={styles.tipIcon}>{tip.icon}</Text>
@@ -137,6 +140,8 @@ function CategoryDetailView({
   onAddTip: (category: GuideCategory) => void;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <ScrollView
       style={styles.detailScroll}
@@ -201,6 +206,8 @@ function HomeView({
   onEditCategory: (category: GuideCategory) => void;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <ScrollView
       style={styles.homeScroll}
@@ -279,6 +286,8 @@ function CategoryEditModal({
   onSave: (v: { title: string; emoji: string; color: string }) => Promise<void>;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [title, setTitle] = useState(initial.title);
   const [emoji, setEmoji] = useState(initial.emoji);
   const [color, setColor] = useState(initial.color);
@@ -373,6 +382,8 @@ function TipEditModal({
   onSave: (v: { icon: string; title: string; content: string; link: string }) => Promise<void>;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [icon, setIcon] = useState(initial.icon);
   const [title, setTitle] = useState(initial.title);
   const [content, setContent] = useState(initial.content);
@@ -470,6 +481,8 @@ function TipEditModal({
 export default function GuideScreen() {
   const lang = useLanguage();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
   const [categories, setCategories] = useState<GuideCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -688,7 +701,7 @@ export default function GuideScreen() {
 
 // ─── 스타일 ───────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   // 헤더
   header: {
     flexDirection: 'row',

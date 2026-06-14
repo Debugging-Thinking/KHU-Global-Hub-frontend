@@ -17,7 +17,9 @@ import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
 import { bucketFromAzure } from '@/src/i18n/preferredLanguage';
 import { departmentOptions, countryOptions, languageOptions, languageDisplay } from '@/src/data/selectOptions';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { ThemeToggle } from '@/src/components/ui/ThemeToggle';
+import { useColors, useThemedStyles, useThemeStore, schemeFromTheme } from '@/src/theme';
 import type { MentoringRole } from '@/src/types/auth';
 
 const CURRENT_YEAR = new Date().getFullYear();
@@ -34,6 +36,8 @@ export default function ProfileSetupScreen() {
   const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
   const [bio, setBio] = useState('');
+  const [theme, setTheme] = useState<'LIGHT' | 'DARK'>('LIGHT');
+  const setScheme = useThemeStore((s) => s.setScheme);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -43,6 +47,7 @@ export default function ProfileSetupScreen() {
   const deptOpts = useMemo(() => departmentOptions(uiLang), [uiLang]);
   const countryOpts = useMemo(() => countryOptions(uiLang), [uiLang]);
   const langOpts = useMemo(() => languageOptions(), []);
+  const styles = useThemedStyles(makeStyles);
   const isNewStudent = admissionYear === CURRENT_YEAR;
 
   const handleSubmit = async () => {
@@ -63,6 +68,7 @@ export default function ProfileSetupScreen() {
         preferredLanguage,
         mentoringRole: role,
         bio: bio.trim() || undefined,
+        theme,
       });
       const profile = await memberApi.getMe();
       setProfile(profile);
@@ -169,6 +175,13 @@ export default function ProfileSetupScreen() {
             onSelect={setPreferredLanguage}
           />
 
+          {/* 다크모드 (선호 언어 다음) — 토글 즉시 미리보기 + 저장 */}
+          <ThemeToggle
+            value={theme}
+            onChange={(v) => { setTheme(v); setScheme(schemeFromTheme(v)); }}
+            lang={uiLang}
+          />
+
           {/* 자기소개 (선택) */}
           <Input
             label={t.bioLabel}
@@ -195,7 +208,7 @@ export default function ProfileSetupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   scroll: {
     paddingHorizontal: Spacing[5],
     paddingTop: Spacing[8],

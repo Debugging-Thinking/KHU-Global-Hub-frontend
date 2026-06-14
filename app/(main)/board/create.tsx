@@ -18,11 +18,14 @@ import { Button } from '@/src/components/ui/Button';
 import { boardApi } from '@/src/api/board';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 export default function CreatePostScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const { postId } = useLocalSearchParams<{ postId?: string }>();
   const editing = !!postId;
@@ -169,7 +172,7 @@ export default function CreatePostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

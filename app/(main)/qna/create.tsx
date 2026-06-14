@@ -17,11 +17,14 @@ import { ImagePickerButton } from '@/src/components/ui/ImagePickerButton';
 import { qnaApi } from '@/src/api/qna';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT } from '@/src/i18n';
-import { Colors, Spacing, Typography } from '@/constants/theme';
+import { Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 export default function CreateQnAScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -102,7 +105,7 @@ export default function CreateQnAScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

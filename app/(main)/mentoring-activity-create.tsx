@@ -18,7 +18,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient from "@/src/api/client";
-import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+import { Radius, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 const MAX_IMAGES = 5;
 
@@ -30,6 +31,8 @@ interface PickedImage {
 export default function MentoringActivityCreateScreen() {
   const { matchId, partnerName } = useLocalSearchParams<{ matchId: string; partnerName: string }>();
   const router = useRouter();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
   const [images, setImages] = useState<PickedImage[]>([]);
@@ -206,7 +209,7 @@ export default function MentoringActivityCreateScreen() {
 }
 
 const THUMB = 90;
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: Spacing[4], paddingVertical: Spacing[3], borderBottomWidth: 1, borderBottomColor: Colors.border, backgroundColor: Colors.background },
   backBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   headerTitle: { fontSize: Typography.lg, fontWeight: Typography.bold, color: Colors.textPrimary },

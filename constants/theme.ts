@@ -50,6 +50,51 @@ export const Colors = {
   overlayLight: 'rgba(196, 18, 48, 0.06)',
 } as const;
 
+/** 테마 팔레트 타입 — 라이트/다크가 공유하는 키 집합(값은 자유 string). */
+export type ThemeColors = Record<keyof typeof Colors, string>;
+
+/**
+ * 다크 테마 팔레트 — Colors와 동일 키. 브랜드(크림슨/골드)는 유지하고
+ * 배경·표면·텍스트·보더를 다크 뉴트럴로 전환. (라이트의 "warm cream"에 대응하는 warm near-black)
+ */
+export const DarkColors: ThemeColors = {
+  primary: '#FF5A77',
+  primaryDark: '#C41230',
+  primaryLight: '#3A1A20',
+  primaryMuted: '#7A4048',
+
+  accent: '#E0B341',
+  accentLight: '#3A2F12',
+  accentDark: '#C8951C',
+
+  success: '#3FB37F',
+  successLight: '#12251C',
+  warning: '#E0902E',
+  warningLight: '#2E2412',
+  error: '#F2554F',
+  errorLight: '#2E1514',
+
+  background: '#15110F',
+  surface: '#1E1A18',
+  surfaceSecondary: '#26211F',
+  surfaceWarm: '#241B18',
+
+  textPrimary: '#F5EEEC',
+  textSecondary: '#C2B2B6',
+  textTertiary: '#8C797E',
+  textInverse: '#FFFFFF',
+
+  border: '#352D2F',
+  borderFocus: '#FF5A77',
+  divider: '#2A2426',
+
+  tabActive: '#FF5A77',
+  tabInactive: '#8C797E',
+
+  overlay: 'rgba(0, 0, 0, 0.6)',
+  overlayLight: 'rgba(255, 90, 119, 0.10)',
+};
+
 export const Typography = {
   xs: 11,
   sm: 13,

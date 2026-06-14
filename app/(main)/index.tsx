@@ -20,7 +20,8 @@ import { translateApi } from '@/src/api/translate';
 import { useAuthStore } from '@/src/store/authStore';
 import { useT, timeAgo } from '@/src/i18n';
 import { isPrestoredMode } from '@/src/i18n/preferredLanguage';
-import { Colors, Radius, Spacing, Typography } from '@/constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { PostSummary } from '@/src/types/board';
 import type { QnASummary } from '@/src/types/qna';
 
@@ -29,6 +30,8 @@ type CommunityTab = 'BOARD' | 'QNA';
 function CommunityScreen() {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const language = useAuthStore((s) => s.profile?.language ?? 'KO');
   const preferredCode = useAuthStore((s) => s.profile?.preferredLanguage ?? 'en');
   const isAdmin = useAuthStore((s) => s.profile?.isAdmin);
@@ -214,6 +217,8 @@ function CommunityScreen() {
 }
 
 function PostCard({ post, onPress, t, displayTitle }: { post: PostSummary; onPress: () => void; t: ReturnType<typeof useT>; displayTitle?: string }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Card onPress={onPress} style={styles.postCard}>
       <Text style={styles.postTitle} numberOfLines={2}>{displayTitle ?? post.title}</Text>
@@ -239,6 +244,8 @@ function PostCard({ post, onPress, t, displayTitle }: { post: PostSummary; onPre
 }
 
 function QnACard({ item, onPress, t, displayTitle }: { item: QnASummary; onPress: () => void; t: ReturnType<typeof useT>; displayTitle?: string }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Card onPress={onPress} style={styles.postCard}>
       <View style={styles.qnaTop}>
@@ -271,7 +278,7 @@ function QnACard({ item, onPress, t, displayTitle }: { item: QnASummary; onPress
 
 export default CommunityScreen;
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

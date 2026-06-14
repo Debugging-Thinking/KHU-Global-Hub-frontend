@@ -16,7 +16,8 @@ import { Ionicons } from "@expo/vector-icons";
 
 import { Screen } from "@/src/components/layout/Screen";
 import apiClient, { unwrap } from "@/src/api/client";
-import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+import { Radius, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 interface ActivityItem {
   id: number;
@@ -44,6 +45,8 @@ export default function MentoringActivityDetailScreen() {
     partnerName: string;
   }>();
   const router = useRouter();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   const [activity, setActivity] = useState<ActivityItem | null>(null);
   const [loading, setLoading] = useState(true);
@@ -158,7 +161,7 @@ export default function MentoringActivityDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",

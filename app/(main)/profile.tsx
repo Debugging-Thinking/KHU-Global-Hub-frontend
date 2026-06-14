@@ -34,16 +34,14 @@ import { useT, badgeName } from '@/src/i18n';
 import { bucketFromAzure } from '@/src/i18n/preferredLanguage';
 import { departmentOptions, countryOptions, languageOptions, languageDisplay } from '@/src/data/selectOptions';
 import { departmentLabel, countryLabel } from '@/src/data/labels';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { ThemeToggle } from '@/src/components/ui/ThemeToggle';
+import { useColors, useThemedStyles, useThemeStore, schemeFromTheme } from '@/src/theme';
 import type { MentoringRole } from '@/src/types/auth';
 import { badgeApi } from '@/src/api/badge';
 import { BADGE_META } from '@/src/types/badge';
 import type { BadgeId, BadgeInfo } from '@/src/types/badge';
 
-const ROLE_COLORS: Record<string, string> = {
-  MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
-  ADMIN: '#C41230',
-};
 const CURRENT_YEAR = new Date().getFullYear();
 const YEARS = Array.from({ length: CURRENT_YEAR - 2015 + 1 }, (_, i) => CURRENT_YEAR - i);
 
@@ -53,6 +51,8 @@ interface InfoRowProps {
   value: string;
 }
 function InfoRow({ icon, label, value }: InfoRowProps) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <View style={styles.infoRow}>
       <Ionicons name={icon} size={17} color={Colors.primary} />
@@ -65,7 +65,14 @@ function InfoRow({ icon, label, value }: InfoRowProps) {
 export default function ProfileScreen() {
   const { profile, setProfile, logout } = useAuthStore();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
+  const setScheme = useThemeStore((s) => s.setScheme);
 
+  const ROLE_COLORS: Record<string, string> = {
+    MENTOR: Colors.accent, MENTEE: Colors.primary, NONE: Colors.textTertiary,
+    ADMIN: '#C41230',
+  };
   const ROLE_LABELS: Record<string, string> = {
     MENTOR: t.mentor, MENTEE: t.mentee, NONE: t.none, ADMIN: '관리자',
   };
@@ -78,6 +85,7 @@ export default function ProfileScreen() {
   const [preferredLanguage, setPreferredLanguage] = useState<string>('ko');
   const [mentoringRole, setMentoringRole] = useState<MentoringRole>('MENTEE');
   const [bio, setBio] = useState('');
+  const [theme, setTheme] = useState<'LIGHT' | 'DARK'>('LIGHT');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
@@ -106,6 +114,7 @@ export default function ProfileScreen() {
     setPreferredLanguage(profile.preferredLanguage ?? 'ko');
     setMentoringRole(profile.mentoringRole === 'NONE' ? 'MENTEE' : profile.mentoringRole);
     setBio(profile.bio ?? '');
+    setTheme(profile.theme ?? 'LIGHT');
     setError('');
     setIsEditing(true);
   };
@@ -113,6 +122,7 @@ export default function ProfileScreen() {
   const handleCancel = () => {
     setIsEditing(false);
     setError('');
+    setScheme(schemeFromTheme(profile?.theme)); // 미저장 테마 미리보기 되돌리기
   };
 
   const handleSave = async () => {
@@ -132,6 +142,7 @@ export default function ProfileScreen() {
         language: bucketFromAzure(preferredLanguage),
         preferredLanguage,
         bio: bio.trim(),
+        theme,
         // 신입생은 mentoringRole 전송하지 않음 (백엔드에서도 MENTEE 고정)
         ...(isNewStudent ? {} : { mentoringRole }),
       });
@@ -363,6 +374,13 @@ export default function ProfileScreen() {
             onSelect={setPreferredLanguage}
           />
 
+          {/* 다크모드 (선호 언어 다음) — 토글 즉시 미리보기 + 저장 */}
+          <ThemeToggle
+            value={theme}
+            onChange={(v) => { setTheme(v); setScheme(schemeFromTheme(v)); }}
+            lang={editLang}
+          />
+
           {/* 멘토링 역할 */}
           <View>
             <Text style={styles.sectionLabel}>{t.mentoringRole}</Text>
@@ -417,7 +435,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -26,7 +26,8 @@ import { guideApi } from '@/src/api/guide';
 import { badgeApi } from '@/src/api/badge';
 import { BADGE_META } from '@/src/types/badge';
 import type { BadgeId } from '@/src/types/badge';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { QuizAnswerItem, QuizQuestion, QuizSubmitResponse } from '@/src/types/quiz';
 import type { GuideCategory } from '@/src/types/guide';
 import { useAuthStore } from '@/src/store/authStore';
@@ -83,6 +84,8 @@ function QuizView({
 }) {
   const lang = useLanguage();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<QuizAnswerItem[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -222,6 +225,8 @@ function ResultView({
   onHome: () => void;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const questionMap = Object.fromEntries(questions.map((q) => [q.id, q]));
   const isPerfect = response.correctCount === response.totalCount;
   const isGood = response.score >= 70;
@@ -315,6 +320,8 @@ function HomeView({
 }) {
   const router = useRouter();
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
 
   const header = (
     <View style={styles.homeHeader}>
@@ -392,6 +399,8 @@ function AdminQuestionListView({
   onEdit: (q: QuizQuestion) => void;
   onDelete: (q: QuizQuestion) => void;
 }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <Screen padded={false}>
       <View style={styles.adminHeader}>
@@ -468,6 +477,8 @@ function QuestionFormModal({
   }) => Promise<void>;
 }) {
   const t = useT();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   // 카테고리는 진입한 퀴즈 목록의 카테고리로 고정 (폼에서 선택 안 함).
   const category = initial.category;
   const [question, setQuestion] = useState(initial.question);
@@ -824,7 +835,7 @@ export default function QuizScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   // 공통
   centerFull: {
     flex: 1,

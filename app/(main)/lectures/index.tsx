@@ -14,12 +14,15 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Screen } from '@/src/components/layout/Screen';
 import { lectureApi } from '@/src/api/lecture';
 import { useT } from '@/src/i18n';
-import { Colors, Radius, Shadow, Spacing, Typography } from '@/constants/theme';
+import { Radius, Shadow, Spacing, Typography, type ThemeColors } from '@/constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 import type { LectureSummary } from '@/src/types/lecture';
 
 const SEMESTER = '2026-1';
 
 function LectureCard({ item, onPress }: { item: LectureSummary; onPress: () => void }) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.cardTop}>
@@ -50,6 +53,8 @@ function LectureCard({ item, onPress }: { item: LectureSummary; onPress: () => v
 export default function LecturesScreen() {
   const t = useT();
   const router = useRouter();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [query, setQuery] = useState('');
   const [lectures, setLectures] = useState<LectureSummary[]>([]);
   const [loading, setLoading] = useState(true);
@@ -128,7 +133,7 @@ export default function LecturesScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',

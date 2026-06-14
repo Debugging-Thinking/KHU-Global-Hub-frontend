@@ -8,7 +8,8 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { Colors, Radius, Spacing, Typography } from '../../../constants/theme';
+import { Radius, Spacing, Typography, type ThemeColors } from '../../../constants/theme';
+import { useColors, useThemedStyles } from '@/src/theme';
 
 interface Props extends TextInputProps {
   label?: string;
@@ -26,6 +27,8 @@ export function Input({
   containerStyle,
   ...rest
 }: Props) {
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const [focused, setFocused] = useState(false);
 
   return (
@@ -56,7 +59,7 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   container: { gap: Spacing[1] },
   label: {
     fontSize: Typography.sm,

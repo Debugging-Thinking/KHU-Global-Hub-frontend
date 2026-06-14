@@ -20,7 +20,8 @@ import { useAuthStore } from "@/src/store/authStore";
 import { useLanguage, useT, badgeName } from "@/src/i18n";
 import { departmentLabel, countryLabel } from "@/src/data/labels";
 import { languageDisplay } from "@/src/data/selectOptions";
-import { Colors, Radius, Spacing, Typography } from "@/constants/theme";
+import { Radius, Spacing, Typography, type ThemeColors } from "@/constants/theme";
+import { useColors, useThemedStyles } from "@/src/theme";
 
 interface PartnerProfile {
   memberId: number;
@@ -49,6 +50,8 @@ const LANGUAGE_LABEL: Record<string, string> = {
 export default function MentorProfileScreen() {
   const { memberId } = useLocalSearchParams<{ memberId: string }>();
   const router = useRouter();
+  const Colors = useColors();
+  const styles = useThemedStyles(makeStyles);
   const lang = useLanguage();
   const t = useT();
   const roleText = (r: string) => (r === "MENTOR" ? t.mentor : r === "MENTEE" ? t.mentee : t.none);
@@ -303,7 +306,7 @@ export default function MentorProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (Colors: ThemeColors) => StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
