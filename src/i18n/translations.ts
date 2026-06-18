@@ -56,6 +56,7 @@ export interface T {
   guideCategoriesLabel: string;
   guideEarned: string;
   guideQuizBtn: string;
+  guideViewBtn: string;
   guideHeaderTitle: string;
   guideItemsSuffix: string;
   guideHeroTitle: string;
@@ -283,6 +284,7 @@ const KO: T = {
   guideCategoriesLabel: '카테고리',
   guideEarned: '🏅 획득!',
   guideQuizBtn: '퀴즈',
+  guideViewBtn: '가이드',
   guideHeaderTitle: 'KHU 가이드',
   guideItemsSuffix: '개 항목',
   guideHeroTitle: '경희대 신입생\n필수 가이드',
@@ -532,6 +534,7 @@ const EN: T = {
   guideCategoriesLabel: 'Category',
   guideEarned: '🏅 Acquired!',
   guideQuizBtn: 'Quiz',
+  guideViewBtn: 'Guide',
   guideHeaderTitle: 'KHU Guide',
   guideItemsSuffix: ' items',
   guideHeroTitle: 'Essential Guide\nfor KHU Freshmen',
@@ -781,6 +784,7 @@ const ZH: T = {
   guideCategoriesLabel: '类别',
   guideEarned: '🏅 已获得！',
   guideQuizBtn: '测验',
+  guideViewBtn: '指南',
   guideHeaderTitle: 'KHU 指南',
   guideItemsSuffix: ' 个项目',
   guideHeroTitle: '庆熙大学新生\n必备指南',
@@ -1030,6 +1034,7 @@ const VI: T = {
   guideCategoriesLabel: 'Danh mục',
   guideEarned: '🏅 Đã đạt!',
   guideQuizBtn: 'Câu đố',
+  guideViewBtn: 'Hướng dẫn',
   guideHeaderTitle: 'Hướng dẫn KHU',
   guideItemsSuffix: ' mục',
   guideHeroTitle: 'Hướng dẫn thiết yếu\ncho tân sinh viên KHU',
@@ -1279,6 +1284,7 @@ const UZ: T = {
   guideCategoriesLabel: 'Toifa',
   guideEarned: '🏅 Qoʻlga kiritildi!',
   guideQuizBtn: 'Viktorina',
+  guideViewBtn: 'Qoʻllanma',
   guideHeaderTitle: 'KHU qoʻllanmasi',
   guideItemsSuffix: ' ta',
   guideHeroTitle: 'KHU birinchi kurs talabalari uchun\nasosiy qoʻllanma',
@@ -1528,6 +1534,7 @@ const MN: T = {
   guideCategoriesLabel: 'Ангилал',
   guideEarned: '🏅 Авлаа!',
   guideQuizBtn: 'Асуулга',
+  guideViewBtn: 'Гарын авлага',
   guideHeaderTitle: 'KHU гарын авлага',
   guideItemsSuffix: ' зүйл',
   guideHeroTitle: 'KHU-ийн нэгдүгээр курсын\nзайлшгүй гарын авлага',

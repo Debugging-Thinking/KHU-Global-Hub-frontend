@@ -125,19 +125,24 @@ function HomeView({
               <Text style={styles.categoryTitle}>
                 {pick(cat.title, lang)}
               </Text>
-              {earned ? (
-                <Text style={[styles.categoryCount, { color: cat.color }]}>{t.guideEarned}</Text>
-              ) : (
+              <View style={styles.cardBtnRow}>
                 <TouchableOpacity
-                  style={[styles.quizSmallBtn, { borderColor: cat.color }]}
-                  onPress={(e) => { e.stopPropagation(); onQuiz(cat.id); }}
-                  activeOpacity={0.7}
+                  style={[styles.cardBtn, { backgroundColor: cat.color }]}
+                  onPress={(e) => { e.stopPropagation(); onSelectCategory(cat.id); }}
+                  activeOpacity={0.8}
                 >
-                  <Text style={[styles.quizSmallBtnText, { color: cat.color }]}>
-                    {t.guideQuizBtn}
+                  <Text style={styles.cardBtnTextFilled} numberOfLines={1}>{t.guideViewBtn}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.cardBtn, styles.cardBtnOutline, { borderColor: cat.color }]}
+                  onPress={(e) => { e.stopPropagation(); onQuiz(cat.id); }}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.cardBtnTextOutline, { color: cat.color }]} numberOfLines={1}>
+                    {earned ? t.guideEarned : t.guideQuizBtn}
                   </Text>
                 </TouchableOpacity>
-              )}
+              </View>
             </TouchableOpacity>
           );
         })}
@@ -313,19 +318,32 @@ const styles = StyleSheet.create({
     fontWeight: Typography.semibold,
     color: Colors.textPrimary,
   },
-  categoryCount: {
-    fontSize: Typography.xs,
-    fontWeight: Typography.medium,
+  cardBtnRow: {
+    flexDirection: 'row',
+    gap: Spacing[2],
+    marginTop: Spacing[2],
   },
-  quizSmallBtn: {
-    borderWidth: 1,
+  cardBtn: {
+    flex: 1,
     borderRadius: Radius.full,
+    paddingVertical: Spacing[2],
     paddingHorizontal: Spacing[2],
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-    marginTop: Spacing[1],
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  quizSmallBtnText: { fontSize: Typography.xs, fontWeight: Typography.semibold },
+  cardBtnOutline: {
+    borderWidth: 1,
+    backgroundColor: 'transparent',
+  },
+  cardBtnTextFilled: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+    color: '#FFFFFF',
+  },
+  cardBtnTextOutline: {
+    fontSize: Typography.sm,
+    fontWeight: Typography.semibold,
+  },
 
   // 카테고리 상세
   detailScroll: { flex: 1 },
